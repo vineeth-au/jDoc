@@ -1,68 +1,47 @@
 # jDoc
 
-Terminal reader for the official Java SE API documentation on macOS. Select a
-documentation release independently of the Java runtime installed on your Mac.
-`jDoc` fetches a release's class index and each requested class page on demand,
-then caches extracted text and signatures in `~/Library/Caches/jDoc`. A Java 17
-or newer runtime is required; a matching JDK and `javap` are not required.
-The complete requirements are in [`docs/specs.MD`](docs/specs.MD).
+jDoc is a macOS command-line browser for Java API documentation. Look up JDK classes by short name, browse their documented methods and constructors, and choose a documentation release independently of your installed Java version.
+
+## Requirements
+
+- Java 17 or newer
+- Maven to build from source
+- Network access for the first lookup of a release or class
 
 ## Build and run
 
+From the repository directory:
+
 ```sh
 mvn package
-./jDoc --versions
 ./jDoc --docVersion 17
-./jDoc String -repeat
+./jDoc String
 ```
 
-The `jDoc` launcher is executable. To invoke it from another directory, add
-this repository to your `PATH`, or link the launcher in a directory already on
-your `PATH`. If you want the short command, set your own zsh alias:
+The first lookup downloads a class index and documentation page. Subsequent lookups of cached classes work offline.
 
-```sh
-alias j='jDoc'
-```
+## Examples
 
-Put that line in `~/.zshrc` to make it persistent. The application does not
-install or overwrite a `j` command.
-
-## Commands
-
-| Command | Meaning |
+| Command | Result |
 | --- | --- |
-| `jDoc --help` | Show full usage. |
-| `jDoc --version`, `jDoc -v` | Show the application version. |
-| `jDoc --versions` | Show supported versions (8, 11, 17, 21, 25), selection, and cache status. |
-| `jDoc --docVersion 17` | Set the default documentation version persistently. |
-| `jDoc String` | Show signatures and documentation of methods directly on `String`'s page. |
-| `jDoc Exception` | Show the class description and constructors when no methods are declared directly. |
-| `jDoc String -valueOf` | Show the first overload in that release's Javadoc method-summary order. |
-| `jDoc String -p 1` | Show all directly documented methods with one parameter. |
-| `jDoc String valueOf -p 3` | Show three-parameter `valueOf` overloads. |
-| `jDoc String valueOf -p char-array,int,int` | Select the exact overload. |
+| `./jDoc --versions` | List supported documentation releases and cache status |
+| `./jDoc --docVersion 21` | Select Java 21 documentation for future lookups |
+| `./jDoc String` | Browse methods documented on `String` |
+| `./jDoc Exception` | Browse the class description and constructors |
+| `./jDoc String -repeat` | Show the `repeat` method |
+| `./jDoc String -valueOf` | Show the first `valueOf` overload |
+| `./jDoc String valueOf -p char-array,int,int` | Find a specific overload |
+| `./jDoc --help` | Show all options |
 
-`--params` is an alias for `-p`. A **number** following it is a **parameter
-count**, never an overload number. Parameter *types* require a method name.
-Use `-array` for array types (for example, `char-array` means `char[]`). Spaces
-after commas work too: `jDoc String valueOf -p char-array, int, int`. Put `-p`
-last in the command. `jDoc String 'valueOf(char[], int, int)'` is not the
-preferred syntax; parentheses and spaces require quoting in macOS shells.
+Interactive browsing is available when running in a terminal. Redirected output is plain text. Set `NO_COLOR=1` to disable color, or `JDOC_CACHE` to choose a different cache directory.
 
-Short class names are resolved through the selected release's class index.
-Ambiguous names offer qualified choices; close misspellings offer suggestions.
-Interactive prompts require a terminal. In scripts and pipes, use qualified
-class names or correct spelling instead. Large results are displayed with
-the interactive JLine method browser when run in a terminal. Type to filter
-signatures (`/` starts a search that can include `q`); use ↑/↓ or Page Up/Down
-to move, Enter to read full documentation, `b` to go back, and `q` to quit.
-The browser preserves the release's Javadoc method-summary order. Direct
-method lookups print documentation with colored headings, signatures and
-section labels. Set `NO_COLOR=1` for a monochrome terminal; redirected output
-is always plain text.
+jDoc currently searches JDK documentation, not project dependencies or inherited methods.
 
-The first lookup of a release needs network access to fetch its class index;
-the first lookup of each class needs network access for that class page. Cached
-class lookups work offline. Set `JDOC_CACHE` to override the cache location.
-Inherited methods (`-i`), project dependencies, and complete offline archives
-are future features.
+## Contributing
+
+Bug reports and pull requests are welcome. Run `mvn test` before submitting a change.
+
+## License
+
+[MIT](LICENSE).
+I used mvn because that is the build command already documented; once the copied Maven wrapper is verified in CI, you can replace it with ./mvnw throughout.
