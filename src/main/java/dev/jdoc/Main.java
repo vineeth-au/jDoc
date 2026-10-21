@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -30,16 +29,21 @@ public final class Main {
   }
 
   private void run(String[] args) throws IOException {
-    if (args.length == 0 || args[0].equals("--help") || args[0].equals("-h")) {
+    if (args.length > 0 && (args[0].equals("--help") || args[0].equals("-h"))) {
       help();
       return;
     }
-    if (args[0].equals("--version") || args[0].equals("-v")) {
+    if (args.length == 0 && System.console() == null) {
+      System.out.println("An interactive terminal is required to browse packages. "
+          + "Use jDoc <Class> or jDoc --help.");
+      return;
+    }
+    if (args.length > 0 && (args[0].equals("--version") || args[0].equals("-v"))) {
       requireLength(args, 1);
       System.out.println("jDoc " + APP_VERSION);
       return;
     }
-    if (args[0].equals("--versions")) {
+    if (args.length > 0 && args[0].equals("--versions")) {
       requireLength(args, 1);
       String current = selection();
       boolean automatic = current == null;
@@ -55,7 +59,7 @@ public final class Main {
       }
       return;
     }
-    if (args[0].equals("--docVersion") || args[0].equals("--doc-version")) {
+    if (args.length > 0 && (args[0].equals("--docVersion") || args[0].equals("--doc-version"))) {
       requireLength(args, 2);
       Versions.base(args[1]);
       Files.createDirectories(selected.getParent());
@@ -64,7 +68,7 @@ public final class Main {
           "Selected Java " + args[1] + " documentation. Pages will be fetched on demand.");
       return;
     }
-    if (args[0].equals("--java")) {
+    if (args.length > 0 && args[0].equals("--java")) {
       throw new IllegalArgumentException("Use --docVersion <release> to select documentation.");
     }
     String version = selection();
@@ -81,7 +85,26 @@ public final class Main {
           "Could not load the Java " + version + " class index (network required on first use): "
               + ex.getMessage(), ex);
     }
-    String name = resolve(index, args[0]);
+    if (args.length == 0) {
+      new BrowserSession(docs, index, version, null).run();
+      return;
+    }
+    String requested = args[0];
+    String[] memberArgs = Arrays.copyOfRange(args, 1, args.length);
+    final String lookup = requested;
+    if (!index.containsKey(requested) && requested.contains(".")
+        && index.keySet().stream().noneMatch(s -> s.endsWith("." + lookup))) {
+      int dot = requested.lastIndexOf('.');
+      String prefix = requested.substring(0, dot);
+      if (index.containsKey(prefix) || index.keySet().stream()
+          .anyMatch(s -> s.endsWith("." + prefix))) {
+        memberArgs = new String[args.length];
+        memberArgs[0] = requested.substring(dot + 1);
+        System.arraycopy(args, 1, memberArgs, 1, args.length - 1);
+        requested = prefix;
+      }
+    }
+    String name = resolve(index, requested);
     if (name == null) {
       return;
     }
@@ -92,18 +115,24 @@ public final class Main {
       throw new IOException(
           "Could not load " + name + " (network required if uncached): " + ex.getMessage(), ex);
     }
-    if (args.length == 1 && System.console() != null) {
-      new MethodBrowser(doc).run();
+    if (doc.stale) {
+      System.err.println("jDoc: Using older cached documentation; reconnect to refresh inherited "
+          + "methods, fields, and nested types.");
+    }
+    if (memberArgs.length == 0 && System.console() != null) {
+      new BrowserSession(docs, index, version, doc).run();
       return;
     }
-    List<DocModel.Method> declared = doc.methods.isEmpty() ? doc.constructors : doc.methods;
-    List<DocModel.Method> methods = new ArrayList<>(declared);
-    if (args.length > 1) {
-      methods = filter(methods, Arrays.copyOfRange(args, 1, args.length));
-    }
-    if (methods.isEmpty() && args.length > 1) {
-      String requestedMethod = args[1].startsWith("-") ? args[1].substring(1) : args[1];
-      String alternatives = declared.stream().filter(m -> m.name.equals(requestedMethod))
+    List<DocModel.Method> methods = MemberLookup.select(doc, memberArgs);
+    if (methods.isEmpty() && memberArgs.length > 0) {
+      if (doc.stale) {
+        throw new IllegalArgumentException("This cached page predates member lookup; reconnect "
+            + "to refresh before deciding the member is absent.");
+      }
+      String requestedMethod = memberArgs[0].startsWith("-")
+          ? memberArgs[0].substring(1) : memberArgs[0];
+      String alternatives = doc.declaredMembers().stream()
+          .filter(m -> m.name.equals(requestedMethod))
           .map(m -> "\n  " + m.signature).collect(Collectors.joining());
       throw new IllegalArgumentException(
           "No matching documented method on " + name + " in Java " + version + "."
@@ -111,61 +140,50 @@ public final class Main {
     }
     StringBuilder out = new StringBuilder(
         name + " — Java " + version + " documentation\n" + doc.sourceUrl + "\n\n");
-    if (args.length == 1 && doc.methods.isEmpty() && doc.description != null
+    if (memberArgs.length == 0 && doc.methods.isEmpty() && doc.description != null
         && !doc.description.isEmpty()) {
       out.append(doc.description).append("\n\n");
     }
     if (methods.isEmpty()) {
-      out.append("No directly documented methods or constructors.\n");
+      out.append("No documented members.\n");
     }
+    List<String> tokens = Arrays.stream(memberArgs).filter(t -> !t.equals("-i")).toList();
+    boolean namedLookup = !tokens.isEmpty() && !tokens.get(0).equals("-p")
+        && !tokens.get(0).equals("--params");
     for (DocModel.Method method : methods) {
-      out.append(method.signature).append('\n');
-      if (!method.description.isEmpty()) {
-        out.append("  ").append(method.description).append('\n');
+      DocModel.Method displayed = method;
+      String unavailable = null;
+      if ((method.inherited || method.kind.equals("nested type"))
+          && namedLookup) {
+        try {
+          displayed = docs.detail(version, method);
+        } catch (IOException ex) {
+          unavailable = "Details unavailable (not cached or offline): " + ex.getMessage();
+        }
       }
-      if (!method.details.isEmpty()) {
-        out.append(method.details).append('\n');
+      if (method.inherited) {
+        out.append("Inherited from ").append(method.declaringType).append('\n');
+      }
+      out.append(displayed.kind).append(": ").append(displayed.signature).append('\n');
+      if (displayed.description != null && !displayed.description.isEmpty()) {
+        out.append("  ").append(displayed.description).append('\n');
+      }
+      if (displayed.details != null && !displayed.details.isEmpty()) {
+        out.append(displayed.details).append('\n');
+      }
+      if (unavailable != null) {
+        out.append(unavailable).append('\n');
+      }
+      if (displayed.sourceUrl != null) {
+        out.append(displayed.sourceUrl);
+        if (displayed.anchor != null) {
+          out.append('#').append(displayed.anchor);
+        }
+        out.append('\n');
       }
       out.append('\n');
     }
     present(out.toString());
-  }
-
-  private List<DocModel.Method> filter(List<DocModel.Method> methods, String[] args) {
-    String methodName = null;
-    int position = 0;
-    if (!args[0].equals("-p") && !args[0].equals("--params")) {
-      methodName = args[0].startsWith("-") ? args[0].substring(1) : args[0];
-      position = 1;
-    }
-    final String named = methodName;
-    if (named != null) {
-      methods = methods.stream().filter(m -> m.name.equals(named)).collect(Collectors.toList());
-    }
-    if (position == args.length) {
-      return methods.isEmpty() ? methods : methods.subList(0, 1);
-    }
-    if (!args[position].equals("-p") && !args[position].equals("--params")) {
-      throw new IllegalArgumentException(
-          "Expected -p/--params after the method name. See jDoc --help.");
-    }
-    if (position + 1 >= args.length) {
-      throw new IllegalArgumentException("-p requires a parameter count or parameter types.");
-    }
-    String value = String.join("", Arrays.copyOfRange(args, position + 1, args.length)).trim();
-    if (value.matches("[0-9]+")) {
-      int count = Integer.parseInt(value);
-      return methods.stream().filter(m -> m.parameterTypes.size() == count)
-          .collect(Collectors.toList());
-    }
-    if (named == null) {
-      throw new IllegalArgumentException(
-          "Parameter types require a method name; use e.g. jDoc String valueOf -p char-array,int,int.");
-    }
-    List<String> types = Arrays.stream(value.split(",", -1)).map(JavadocParser::normalize)
-        .collect(Collectors.toList());
-    return methods.stream().filter(m -> m.parameterTypes.equals(types))
-        .collect(Collectors.toList());
   }
 
   private String resolve(Map<String, String> index, String requested) {
@@ -173,7 +191,7 @@ public final class Main {
       return requested;
     }
     List<String> matches = index.keySet().stream()
-        .filter(s -> s.substring(s.lastIndexOf('.') + 1).equals(requested))
+        .filter(s -> s.endsWith("." + requested))
         .sorted().collect(Collectors.toList());
     if (matches.size() == 1) {
       return matches.get(0);
@@ -319,13 +337,17 @@ public final class Main {
           jDoc --versions                 Show supported releases and cached status
           jDoc --version | -v             Show the application version
           jDoc --help                     Show this help
-          jDoc <Class>                    Browse direct methods (constructors when none)
-          jDoc <Class> -<method>          Show first overload in Javadoc summary order
-          jDoc <Class> -p <count>         Show methods with this parameter count
-          jDoc <Class> <method> -p <count|types>  Filter named method
+          jDoc                            Search packages or classes (terminal only)
+          jDoc <Class>                    Browse methods, constructors, fields and types
+          jDoc <Class> -<member>          Look up a method or member (inherited too)
+          jDoc <Class> -p <count> [-i]    List methods by arity; -i includes inherited
+          jDoc <Class> <method> -p <count|types>  Filter declared and inherited methods
 
-        Class browser: type to filter (/ starts search); Backspace edits.
-          ↑↓ Navigate  PgUp/PgDn Page  Enter Read  b Back  q Quit
+        Browser: Packages → Classes → Members → Documentation.
+          From home, type String to find a class across all packages.
+          Type to filter (/ starts search); Backspace edits the query.
+          ↑↓ Navigate  PgUp/PgDn Page  →/Enter Open  ← Back one level
+          Esc Package home  q Quit (when not typing); i toggles inherited methods.
 
         Colors are disabled by NO_COLOR or when output is redirected.
         A number after -p/--params is a parameter COUNT, not an overload number.

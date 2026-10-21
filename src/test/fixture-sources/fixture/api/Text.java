@@ -2,6 +2,9 @@ package fixture.api;
 
 /** Sample text with overloaded methods and structured documentation. */
 public class Text {
+  /** Largest supported text length in this fixture. */
+  public static final int MAX_VALUE = 42;
+
   /** Create empty text. */
   public Text() {}
 

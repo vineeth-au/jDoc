@@ -43,13 +43,28 @@ class MethodBrowserTest {
     }
 
     @Test
-    void rightArrowDoesNotReturnEscapeFromDocumentation() throws IOException {
+    void arrowsHaveDistinctCodesFromEscape() throws IOException {
         assertEquals(27, MethodBrowser.readKey(reader("\033")));
-        assertEquals(-2, MethodBrowser.readKey(reader("\033[C")));
-        assertEquals(-2, MethodBrowser.readKey(reader("\033[D")));
+        assertEquals(1005, MethodBrowser.readKey(reader("\033[C")));
+        assertEquals(1004, MethodBrowser.readKey(reader("\033[D")));
         assertEquals(-2, MethodBrowser.readKey(reader("\033[1;5C")));
         assertEquals(1000, MethodBrowser.readKey(reader("\033[A")));
         assertEquals(1002, MethodBrowser.readKey(reader("\033[5~")));
+    }
+
+    @Test
+    void leftMovesUpOneLevelAndEscapeGoesHome() {
+        DocModel doc = new DocModel();
+        doc.name = "java.lang.String";
+        doc.release = "17";
+        doc.methods.add(method("repeat(int count)"));
+        MethodBrowser browser = new MethodBrowser(doc);
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1005, 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1005, 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1004, 24));
+        assertEquals(MethodBrowser.Navigation.BACK, browser.handleKey(1004, 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1005, 24));
+        assertEquals(MethodBrowser.Navigation.HOME, browser.handleKey(27, 24));
     }
 
     private static NonBlockingReader reader(String keys) {

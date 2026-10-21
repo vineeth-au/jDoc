@@ -58,12 +58,34 @@ class JavadocParserTest {
                 + "<div class='member-signature'>public Exception()</div>"
                 + "<div class='block'>Without a message.</div></section></section>";
         DocModel doc = JavadocParser.parse(Jsoup.parse(html), "java.lang.Exception", "url", "17");
-        assertEquals(2, doc.schemaVersion);
+        assertEquals(3, doc.schemaVersion);
         assertTrue(doc.methods.isEmpty());
         assertEquals("A checked exception.", doc.description);
         assertEquals(2, doc.constructors.size());
         assertEquals("public Exception()", doc.constructors.get(0).signature);
         assertEquals(Arrays.asList("String"), doc.constructors.get(1).parameterTypes);
+    }
+
+    @Test
+    void inheritedAnchorsUseErasedSignaturesAndPreferClassImplementations() {
+        String html = "<section class='method-summary'>"
+                + "<a href='#take(java.util.Collection)'>take</a>"
+                + "<div class='inherited-list'><h3 id='methods-inherited-from-class-demo.View'>"
+                + "Methods inherited from interface View</h3><code>"
+                + "<a href='View.html#take(java.util.Collection)'>take</a>, "
+                + "<a href='View.html#stream()'>stream</a></code></div>"
+                + "<div class='inherited-list'><h3 id='methods-inherited-from-class-demo.Base'>"
+                + "Methods inherited from class Base</h3><code>"
+                + "<a href='Base.html#stream()'>stream</a></code></div></section>"
+                + "<section class='method-details'><section class='detail' id='take(java.util.Collection)'>"
+                + "<h3>take</h3><div class='member-signature'>public void take(Collection&lt;String&gt; values)</div>"
+                + "</section></section>";
+        DocModel doc = JavadocParser.parse(Jsoup.parse(html, "https://example.test/demo/Child.html"),
+                "demo.Child", "https://example.test/demo/Child.html", "17");
+        assertEquals("take(Collection)", JavadocParser.key("take", doc.methods.get(0).parameterTypes));
+        assertEquals(1, doc.inherited.size());
+        assertEquals("demo.Base", doc.inherited.get(0).declaringType);
+        assertEquals("https://example.test/demo/Base.html", doc.inherited.get(0).sourceUrl);
     }
 
 }
