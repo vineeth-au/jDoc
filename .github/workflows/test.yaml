@@ -32,4 +32,4 @@ jobs:
       - name: Check published Javadoc pages and indexes
         env:
           JDOC_LIVE_TEST: 'true'
-        run: ./mvnw -Dtest=JavadocLiveTest,SearchIndexLiveTest test
+        run: ./mvnw -Dtest=JavadocLiveTest,SearchIndexLiveTest,ReleaseReportLiveTest test

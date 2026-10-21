@@ -54,6 +54,10 @@ explicit preference, or `./jDoc --docVersion 21 java.util.List -getFirst` for on
 | `./jDoc Map Entry` | Show a nested type |
 | `./jDoc -m computeIfAbsent` | List classes documenting that method |
 | `./jDoc --docVersion 21 java.util.List -getFirst` | Use Java 21 docs for one lookup |
+| `./jDoc --diff 17 21 StringBuilder` | Compare all changed member kinds; shows two new `repeat` methods |
+| `./jDoc --diff 21 25 StringTemplate` | See a Java 21 Preview type absent in Java 25 |
+| `./jDoc --new 21` | List APIs introduced in Java 21, grouped by package |
+| `./jDoc --removal 25` | List APIs flagged for removal as of Java 25 |
 | `./jDoc --help` | Show all options |
 
 In the browser, type to search packages and classes from home, or to filter the
@@ -75,6 +79,11 @@ member and identifies a declaring type when a cached class page confirms it.
 An uncached release is reported as unknown rather than incorrectly called absent.
 Type and package search indexes are downloaded on first use of a release; the
 larger member index is fetched only for reverse member search.
+Version diffs fetch and cache both class pages on demand; a complete diff needs
+both releases available. New-API and removal reports cache their summary pages
+after first use. `--new` filters the cumulative New API page to the requested
+release; `--removal` shows the for-removal status in that release, not merely
+ordinary deprecation. Preview, deprecation, and removal are separate statuses.
 
 ## Contributing
 

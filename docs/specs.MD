@@ -87,6 +87,26 @@
 - `jDoc -m <name>` searches the selected release's member index for method
   names and lists classes that document matching declarations.
 
+## Version comparison and reports
+
+- `jDoc --diff <old> <new> <Class>` compares effective APIs (declared and
+  inherited methods plus constructors, fields, enum constants, nested types)
+  by kind/name and erased parameter types. Show additions, removals, declaration
+  or status changes; omit unchanged groups. A missing class is an added or
+  removed type, not a missing-member error. Keep Preview, Deprecated, and
+  removed distinct. Do not claim a complete diff from an older-schema cache.
+- `jDoc --new <release>` filters that release's cumulative `new-list.html`
+  to entries added in the requested release, grouped by package and kind.
+  Java 17 uses tab classes for release labels; 21 and 25 use an Added in column.
+  Preserve Preview labels such as Java 21 `StringTemplate`.
+- `jDoc --removal <release>` reads only the terminally deprecated section of
+  `deprecated-list.html` for that release. This is a snapshot of APIs flagged
+  for removal *as of* the release, not just newly flagged entries. The
+  Deprecated in column is not necessarily the first release with forRemoval.
+- Cache both release reports under the release's cache directory. A missing
+  cached index, page, or report needs network access; explain incomplete offline
+  comparisons rather than silently returning empty results.
+
 ## Terminal presentation
 
 - Use JLine 4 with a Java 17-compatible artifact.

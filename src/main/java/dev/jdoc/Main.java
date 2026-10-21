@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -71,6 +72,53 @@ public final class Main {
     }
     if (args.length > 0 && args[0].equals("--java")) {
       throw new IllegalArgumentException("Use --docVersion <release> to select documentation.");
+    }
+    if (args.length > 0 && args[0].equals("--diff")) {
+      requireLength(args, 4);
+      Versions.base(args[1]);
+      Versions.base(args[2]);
+      if (args[1].equals(args[2])) throw new IllegalArgumentException("Choose two different releases.");
+      Map<String, String> oldIndex;
+      Map<String, String> newIndex;
+      try {
+        oldIndex = docs.index(args[1]);
+        newIndex = docs.index(args[2]);
+      } catch (IOException ex) {
+        throw new IOException("Cannot compare Java " + args[1] + " and " + args[2]
+            + " (network required if either release index is uncached): " + ex.getMessage(), ex);
+      }
+      Map<String, String> names = new LinkedHashMap<>(oldIndex);
+      names.putAll(newIndex);
+      String name = resolve(names, args[3]);
+      if (name == null) return;
+      DocModel oldDoc;
+      DocModel newDoc;
+      try {
+        oldDoc = oldIndex.containsKey(name)
+            ? docs.classDoc(args[1], name, oldIndex.get(name)) : null;
+        newDoc = newIndex.containsKey(name)
+            ? docs.classDoc(args[2], name, newIndex.get(name)) : null;
+      } catch (IOException ex) {
+        throw new IOException("Cannot compare " + name
+            + " (network required if a class page is uncached): " + ex.getMessage(), ex);
+      }
+      if (oldDoc != null && oldDoc.stale || newDoc != null && newDoc.stale) {
+        throw new IOException("An older cached page cannot produce a complete diff. "
+            + "Reconnect to refresh the pages.");
+      }
+      present(ApiDiff.compare(name, args[1], oldDoc, args[2], newDoc));
+      return;
+    }
+    if (args.length > 0 && (args[0].equals("--new") || args[0].equals("--removal"))) {
+      requireLength(args, 2);
+      try {
+        present(docs.report(args[1], args[0].equals("--removal")).render());
+      } catch (IOException ex) {
+        throw new IOException("Could not load Java " + args[1] + " "
+            + (args[0].equals("--removal") ? "removal" : "new API")
+            + " report (network required if uncached): " + ex.getMessage(), ex);
+      }
+      return;
     }
     VersionChoice choice = override == null ? chooseVersion()
         : new VersionChoice(override, "(selected)", null);
@@ -373,6 +421,9 @@ public final class Main {
           jDoc <Class> -p <count> [-i]    List methods by arity; -i includes inherited
           jDoc <Class> <method> -p <count|types>  Filter declared and inherited methods
           jDoc -m <method>                Find documented classes declaring a method
+          jDoc --diff <old> <new> <Class> Compare effective class APIs across releases
+          jDoc --new <release>            APIs introduced in a documentation release
+          jDoc --removal <release>        APIs flagged for removal as of a release
 
         Browser: Packages → Classes → Members → Documentation.
           From home, type String to find a class across all packages.
