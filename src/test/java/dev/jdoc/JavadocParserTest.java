@@ -58,7 +58,7 @@ class JavadocParserTest {
                 + "<div class='member-signature'>public Exception()</div>"
                 + "<div class='block'>Without a message.</div></section></section>";
         DocModel doc = JavadocParser.parse(Jsoup.parse(html), "java.lang.Exception", "url", "17");
-        assertEquals(3, doc.schemaVersion);
+        assertEquals(4, doc.schemaVersion);
         assertTrue(doc.methods.isEmpty());
         assertEquals("A checked exception.", doc.description);
         assertEquals(2, doc.constructors.size());
@@ -86,6 +86,55 @@ class JavadocParserTest {
         assertEquals(1, doc.inherited.size());
         assertEquals("demo.Base", doc.inherited.get(0).declaringType);
         assertEquals("https://example.test/demo/Base.html", doc.inherited.get(0).sourceUrl);
+    }
+
+    @Test
+    void previewAndTypedLinksArePreservedInTheCachedModel() {
+        String html = "<section class='class-description'><span class='preview-label'>Preview.</span>"
+                + "<div class='block'>A preview class.</div></section>"
+                + "<section class='method-summary'><a href='#example()'>example</a></section>"
+                + "<section class='method-details'><section class='detail' id='example()'>"
+                + "<h3>example</h3><div class='member-signature'>public void example()</div>"
+                + "<span class='preview-label'>Preview.</span>"
+                + "<div class='block'>See <a href='Other.html#run()'>other</a> and "
+                + "<a href='https://example.org/help'>help</a>."
+                + "<ol><li>First</li><li>Second</li></ol></div></section></section>";
+        DocModel doc = JavadocParser.parse(Jsoup.parse(html,
+                Versions.base("21") + "demo/PreviewType.html"), "demo.PreviewType",
+                Versions.base("21") + "demo/PreviewType.html", "21");
+        assertTrue(doc.preview);
+        assertTrue(doc.methods.get(0).preview);
+        assertTrue(doc.methods.get(0).body.stream().anyMatch(b -> b.kind.equals("ordered-list")
+                && b.items.size() == 2));
+        DocModel.Inline linked = doc.methods.get(0).body.get(0).inlines.stream()
+                .filter(i -> "other".equals(i.text)).findFirst().orElseThrow();
+        assertEquals("demo.Other", linked.targetClass);
+        assertEquals("run()", linked.targetAnchor);
+        assertEquals("https://example.org/help", doc.methods.get(0).body.get(0).inlines.stream()
+                .filter(i -> "help".equals(i.text)).findFirst().orElseThrow().externalUrl);
+        DocModel restored = new com.google.gson.Gson().fromJson(new com.google.gson.Gson().toJson(doc),
+                DocModel.class);
+        assertTrue(restored.preview);
+        assertEquals("demo.Other", restored.methods.get(0).body.get(0).inlines.stream()
+                .filter(i -> "other".equals(i.text)).findFirst().orElseThrow().targetClass);
+    }
+
+    @Test
+    void classDeprecationAndLinksInsideCodeKeepTheirTargets() {
+        String html = "<section class='class-description'>"
+                + "<div class='type-signature'><span class='annotations'>@Deprecated(since=\"9\")</span>"
+                + "public class OldType</div><span class='deprecated-label'>Deprecated.</span>"
+                + "<div class='block'>See <pre><a href='Other.html#run()'>Other.run()</a></pre></div>"
+                + "</section>";
+        DocModel doc = JavadocParser.parse(Jsoup.parse(html,
+                Versions.base("17") + "demo/OldType.html"), "demo.OldType",
+                Versions.base("17") + "demo/OldType.html", "17");
+        assertTrue(doc.deprecated);
+        assertEquals("9", doc.deprecatedSince);
+        assertEquals("demo.Other", doc.classBody.stream().filter(b -> b.kind.equals("code"))
+                .findFirst().orElseThrow().codeLinks.get(0).targetClass);
+        assertEquals("run()", doc.classBody.stream().filter(b -> b.kind.equals("code"))
+                .findFirst().orElseThrow().codeLinks.get(0).targetAnchor);
     }
 
 }

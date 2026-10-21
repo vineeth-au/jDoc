@@ -35,7 +35,7 @@ class JavadocFixtureTest {
   void textOverloadsAndVarargsFollowTheGeneratedSummary(String release) throws IOException {
     Document page = fixture(release, "Text");
     DocModel doc = model(release, "Text", page);
-    assertEquals(3, doc.schemaVersion);
+    assertEquals(4, doc.schemaVersion);
     assertEquals("fixture.api.Text", doc.name);
     assertEquals(List.of("format", "valueOf", "valueOf"),
         doc.methods.stream().map(m -> m.name).toList());
@@ -47,10 +47,21 @@ class JavadocFixtureTest {
     assertEquals(List.of("MAX_VALUE"), doc.fields.stream().map(m -> m.name).toList());
     assertTrue(doc.methods.get(2).details.contains("Returns:\n  a new text value"));
 
-    // Current v2 behavior flattens structured documentation into one string.
     assertTrue(page.selectFirst("#method-detail pre") != null);
     assertTrue(doc.methods.get(0).description.contains("Text.format(\"%s\", \"hello\");"));
-    assertFalse(doc.methods.get(0).description.contains("\n"));
+    assertEquals("17", doc.methods.get(0).since);
+    assertTrue(doc.constructors.get(1).deprecated);
+    assertEquals("17", doc.constructors.get(1).deprecatedSince);
+    assertTrue(doc.methods.get(0).body.stream().anyMatch(b -> b.kind.equals("code")
+        && b.code.contains("\n   System.out.println(value);")));
+    assertTrue(doc.methods.get(0).body.stream().anyMatch(b -> b.kind.equals("list")
+        && b.items.size() == 2));
+    assertTrue(doc.methods.get(0).body.stream().flatMap(b -> b.inlines.stream())
+        .anyMatch(i -> "fixture.api.Dictionary.Entry".equals(i.targetClass)));
+    String rendered = String.join("\n", DocRenderer.methodLines(doc.methods.get(0), 100, doc.sourceUrl));
+    assertTrue(rendered.contains("  - ") || rendered.contains("- Retains the first value."));
+    assertTrue(rendered.contains("  System.out.println(value);"));
+    assertTrue(rendered.contains("[fixture.api.Dictionary.Entry]"));
   }
 
   @ParameterizedTest

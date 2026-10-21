@@ -91,4 +91,18 @@ class PackageBrowserTest {
     browser.handleKey(1001, 24);
     assertEquals("java.util.List", browser.handleKey(13, 24));
   }
+
+  @Test
+  void escapeLeavesActiveClassSearchBeforeReturningHome() {
+    PackageBrowser browser = picker();
+    browser.handleKey(1005, 24);
+    browser.handleKey('/', 24);
+    for (char c : "List".toCharArray()) browser.handleKey(c, 24);
+    browser.handleKey(27, 24);
+    assertEquals(PackageBrowser.Level.CLASSES, browser.level);
+    assertEquals("List", browser.selection().query);
+    assertTrue(!browser.selection().searching);
+    browser.handleKey(27, 24);
+    assertEquals(PackageBrowser.Level.PACKAGES, browser.level);
+  }
 }

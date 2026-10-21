@@ -78,6 +78,11 @@ final class PackageBrowser {
   /** Returns a class name when a class result is opened; otherwise null. */
   String handleKey(int key, int height) {
     if (key == 27) {
+      if (selection().searching) {
+        selection().searching = false;
+        error = null;
+        return null;
+      }
       home();
       error = null;
       return null;
@@ -182,7 +187,7 @@ final class PackageBrowser {
     line(out, terminal, "─".repeat(width - 1), AttributedStyle.WHITE, width);
     line(out, terminal, error != null ? error
         : (state.matches.isEmpty() ? "No matches  ·  " : state.matches.size() + " matches  ·  ")
-            + "↑↓ Navigate  ← Back  → Open  Esc Home  q Quit", AttributedStyle.WHITE, width);
+            + "↑↓ Navigate  ← Back  → Open  Esc Search/Home  q Quit", AttributedStyle.WHITE, width);
     out.flush();
   }
 

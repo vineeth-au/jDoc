@@ -35,6 +35,8 @@ class JavadocLiveTest {
       assertFalse(doc.description.isBlank(), url);
       if (name.equals("java.lang.String")) {
         assertTrue(doc.methods.stream().anyMatch(m -> m.name.equals("valueOf")), url);
+        assertTrue(doc.methods.stream().anyMatch(m -> m.name.equals("repeat")
+            && "11".equals(m.since) && !m.body.isEmpty()), url);
       } else if (name.equals("java.util.ArrayList")) {
         assertTrue(doc.methods.stream().anyMatch(m -> m.name.equals("add")), url);
         assertTrue(doc.inherited.stream().anyMatch(m -> m.name.equals("stream")
@@ -48,6 +50,8 @@ class JavadocLiveTest {
       } else if (name.equals("java.util.concurrent.TimeUnit")) {
         assertTrue(doc.enumConstants.stream().anyMatch(m -> m.name.equals("SECONDS")), url);
         assertTrue(doc.methods.stream().anyMatch(m -> m.name.equals("valueOf")), url);
+        assertTrue(doc.classBody.stream().anyMatch(b -> b.kind.equals("code")
+            && b.code.contains("Lock lock")), url);
       } else if (name.equals("java.util.Map")) {
         assertTrue(doc.methods.stream().map(m -> m.name)
             .toList().containsAll(List.of("getOrDefault", "of")), url);

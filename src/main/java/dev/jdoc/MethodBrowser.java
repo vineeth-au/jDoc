@@ -55,6 +55,10 @@ final class MethodBrowser {
 
   Navigation handleKey(int key, int height) {
     if (key == 27) {
+      if (!detail && searching) {
+        searching = false;
+        return Navigation.STAY;
+      }
       return Navigation.HOME;
     }
     if (key == 'q' && (detail || !searching)) {
@@ -82,6 +86,11 @@ final class MethodBrowser {
       state = new State(visible);
     } else if (key == '/') {
       searching = true;
+    } else if (key == 'C') {
+      opened = null;
+      detail = true;
+      detailScroll = 0;
+      searching = false;
     } else if (key == 1000) {
       state.move(-1);
     } else if (key == 1001) {
@@ -116,17 +125,18 @@ final class MethodBrowser {
     PrintWriter out = terminal.writer();
     int width = Math.max(40, terminal.getColumns());
     int height = Math.max(10, terminal.getRows());
-    boolean overview =
-        doc.methods.isEmpty() && doc.description != null && !doc.description.isEmpty();
-    int viewport = height - (overview && !detail ? 6 : 5);
+    List<String> classLines = doc.methods.isEmpty() ? DocRenderer.classLines(doc, width - 1)
+        : List.of();
+    int overviewRows = detail ? 0 : Math.min(3, classLines.size());
+    int viewport = height - 5 - overviewRows;
     out.print("\033[H\033[2J");
     line(out, terminal, doc.name + "  ·  Java " + doc.release + " API"
         + (doc.stale ? "  ·  older cache; reconnect to refresh" : ""), CYAN, width);
     if (detail) {
       List<String> lines = detailLines(opened, width);
       detailScroll = Math.max(0, Math.min(detailScroll, Math.max(0, lines.size() - viewport)));
-      line(out, terminal, (opened == null ? "Member" : opened.kind) + " " + (state.cursor + 1) + "/"
-          + state.matches.size(), YELLOW, width);
+      line(out, terminal, opened == null ? "Class documentation"
+          : opened.kind + " " + (state.cursor + 1) + "/" + state.matches.size(), YELLOW, width);
       rule(out, terminal, width);
       for (int i = 0; i < viewport; i++) {
         int index = detailScroll + i;
@@ -142,8 +152,9 @@ final class MethodBrowser {
       rule(out, terminal, width);
       line(out, terminal, "↑↓ Scroll  PgUp/PgDn Page  ← Back  Esc Home  q Quit", MUTED, width);
     } else {
-      if (overview) {
-        line(out, terminal, doc.description, MUTED, width);
+      for (int i = 0; i < overviewRows; i++) {
+        line(out, terminal, i == overviewRows - 1 && classLines.size() > overviewRows
+            ? "…  (press C for full class documentation)" : classLines.get(i), MUTED, width);
       }
       line(out, terminal,
           "Search members: " + state.query
@@ -166,8 +177,11 @@ final class MethodBrowser {
             : "[" + method.kind + "] ";
         String signature = shorten(label + listSignature(method),
             signatureWidth - 3);
-        String description = shorten(method.inherited ? "Inherited from " + method.declaringType
-            : method.description, Math.max(0, width - signatureWidth - 4));
+        String summary = method.inherited ? "Inherited from " + method.declaringType
+            : method.description;
+        String labels = DocRenderer.summaryLabels(method);
+        if (!labels.isEmpty()) summary = labels + (summary == null || summary.isEmpty() ? "" : "  " + summary);
+        String description = shorten(summary, Math.max(0, width - signatureWidth - 4));
         String row = String.format("%-" + signatureWidth + "s  %s", signature, description);
         lineHighlighted(out, terminal, (index == state.cursor ? "❯ " : "  ") + row,
             index == state.cursor ? SELECTED : GREEN, width, state.query);
@@ -176,39 +190,27 @@ final class MethodBrowser {
       line(out, terminal,
           "i Inherited (" + doc.inherited.size() + (showInherited ? " shown" : " collapsed")
               + ")  ·  " + (state.matches.isEmpty() ? 0 : state.cursor + 1)
-              + "/" + state.matches.size() + "  ← Classes  → Read  Esc Home  q Quit",
+              + "/" + state.matches.size() + "  C Class  ← Classes  → Read  Esc Search/Home  q Quit",
           MUTED, width);
     }
     out.flush();
   }
 
   private List<String> detailLines(DocModel.Method method, int width) {
-    List<String> lines = new ArrayList<>();
     if (method == null) {
+      List<String> lines = DocRenderer.classLines(doc, width - 2);
+      lines.add("");
+      wrap(lines, "Source: " + doc.sourceUrl, width - 2, "");
       return lines;
     }
-    wrap(lines, method.signature, width - 2, "");
+    List<String> lines = DocRenderer.methodLines(method, width - 2, doc.sourceUrl);
     if (state.selected() != null && state.selected().inherited) {
-      wrap(lines, "Inherited from " + state.selected().declaringType, width - 2, "");
+      lines.add(1, "Inherited from " + state.selected().declaringType);
     }
-    lines.add("");
-    wrap(lines, method.description, width - 2, "");
-    lines.add("");
-    for (String entry : (method.details == null ? "" : method.details).split("\n")) {
-      if (entry.startsWith("  ")) {
-        wrap(lines, entry.trim(), width - 4, "  ");
-      } else {
-        lines.add("");
-        lines.add(entry);
-      }
-    }
-    lines.add("");
     if (unavailable != null) {
+      lines.add("");
       wrap(lines, unavailable, width - 2, "");
     }
-    String source = method.sourceUrl == null ? doc.sourceUrl : method.sourceUrl;
-    wrap(lines, "Source: " + source + (method.anchor == null ? "" : "#" + method.anchor),
-        width - 2, "");
     return lines;
   }
 

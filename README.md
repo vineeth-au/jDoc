@@ -53,9 +53,13 @@ The automatic choice is reported on stderr and is not saved. Use
 In the browser, type to search packages and classes from home, or to filter the
 current level. Right Arrow or Enter opens the selection; selecting a package
 shows its classes, while selecting a class opens its members. Left Arrow goes
-back one level, Escape returns to home, and
-`q` quits when you are not typing. Inherited methods are collapsed by default;
-press `i` to toggle them. Their full documentation is fetched only when opened.
+back one level. Escape first leaves an active search (keeping its results);
+otherwise it returns to home. `q` quits when you are not typing. Inherited
+methods are collapsed by default; press `i` to toggle them. Their full
+documentation is fetched only when opened.
+Press `C` from a member list to read the full class description. Paragraphs,
+code examples, lists, and link targets are preserved in documentation details;
+`Since`, `Deprecated`, and `Preview` are shown as text labels when available.
 With no terminal, provide a class name for plain-text output. Set `NO_COLOR=1`
 to disable color, or `JDOC_CACHE` to choose a different cache directory.
 

@@ -10,6 +10,11 @@ final class DocModel {
   String sourceUrl;
   String release;
   String description;
+  List<Block> classBody = new ArrayList<>();
+  String since;
+  boolean deprecated;
+  String deprecatedSince;
+  boolean preview;
   transient boolean stale;
   List<Method> methods = new ArrayList<>();
   List<Method> constructors = new ArrayList<>();
@@ -33,11 +38,31 @@ final class DocModel {
     String signature;
     String description;
     String details;
+    List<Block> body = new ArrayList<>();
+    String since;
+    boolean deprecated;
+    String deprecatedSince;
+    boolean preview;
     String anchor;
     List<String> parameterTypes = new ArrayList<>();
     String kind = "method";
     String declaringType;
     String sourceUrl;
     boolean inherited;
+  }
+
+  static final class Block {
+    String kind; // paragraph, code, list, or label
+    List<Inline> inlines = new ArrayList<>();
+    String code;
+    List<Inline> codeLinks = new ArrayList<>();
+    List<List<Block>> items = new ArrayList<>();
+  }
+
+  static final class Inline {
+    String text;
+    String targetClass;
+    String targetAnchor;
+    String externalUrl;
   }
 }
