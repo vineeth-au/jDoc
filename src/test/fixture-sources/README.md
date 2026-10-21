@@ -19,8 +19,10 @@ API pages. The synthetic sources intentionally use analogous, not identical,
 names to real JDK types. Small, hand-authored type, package, and member search
 index snippets in `fixtures/<release>/search` test the JavaScript index format;
 they are not complete copies of Oracle's indexes.
+Hand-authored excerpts in `fixtures/<release>/reports` cover both the Java 17
+tab-based and the newer release-column report layouts.
 
 For an opt-in check against the five official pages on each supported release,
-run `JDOC_LIVE_TEST=true mvn -Dtest=JavadocLiveTest,SearchIndexLiveTest test`.
+run `JDOC_LIVE_TEST=true mvn -Dtest=JavadocLiveTest,SearchIndexLiveTest,ReleaseReportLiveTest test`.
 The downloaded pages and indexes are parsed in memory and are not checked into
 the repository. A monthly GitHub Actions run performs this compatibility check.

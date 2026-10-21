@@ -117,6 +117,23 @@ final class Documentation {
     return members;
   }
 
+  ReleaseReport report(String release, boolean removal) throws IOException {
+    Versions.base(release);
+    String name = removal ? "removal" : "new";
+    Path path = versionPath(release).resolve("reports").resolve(name + "-v1.json");
+    if (Files.exists(path)) {
+      try (Reader in = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+        ReleaseReport report = gson.fromJson(in, ReleaseReport.class);
+        if (report != null && release.equals(report.release) && name.equals(report.kind)
+            && report.entries != null && !report.entries.isEmpty()) return report;
+      }
+    }
+    String page = removal ? "deprecated-list.html" : "new-list.html";
+    ReleaseReport report = ReleaseReport.parse(fetch(Versions.base(release) + page), release, removal);
+    write(path, report);
+    return report;
+  }
+
   Map<String, String> cachedIndex(String version) throws IOException {
     List<SearchIndex.Type> types = cachedTypeSearch(version);
     List<SearchIndex.Package> packages = cachedPackageSearch(version);
