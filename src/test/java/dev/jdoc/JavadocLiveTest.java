@@ -37,18 +37,21 @@ class JavadocLiveTest {
         assertTrue(doc.methods.stream().anyMatch(m -> m.name.equals("valueOf")), url);
       } else if (name.equals("java.util.ArrayList")) {
         assertTrue(doc.methods.stream().anyMatch(m -> m.name.equals("add")), url);
-        assertTrue(page.select("section.method-summary div.inherited-list a[href*=stream]")
-            .size() > 0, url);
+        assertTrue(doc.inherited.stream().anyMatch(m -> m.name.equals("stream")
+            && m.declaringType.equals("java.util.Collection")), url);
+        assertEquals(1, doc.inherited.stream().filter(m -> m.name.equals("containsAll")).count(), url);
+        assertTrue(doc.inherited.stream().anyMatch(m -> m.name.equals("containsAll")
+            && m.declaringType.equals("java.util.AbstractCollection")), url);
       } else if (name.equals("java.lang.Exception")) {
         assertTrue(doc.methods.isEmpty(), url);
         assertEquals(5, doc.constructors.size(), url);
       } else if (name.equals("java.util.concurrent.TimeUnit")) {
-        assertTrue(page.select("section.constants-summary a.member-name-link").size() > 0, url);
+        assertTrue(doc.enumConstants.stream().anyMatch(m -> m.name.equals("SECONDS")), url);
         assertTrue(doc.methods.stream().anyMatch(m -> m.name.equals("valueOf")), url);
       } else if (name.equals("java.util.Map")) {
         assertTrue(doc.methods.stream().map(m -> m.name)
             .toList().containsAll(List.of("getOrDefault", "of")), url);
-        assertTrue(page.select("section.nested-class-summary a[href*=Entry]").size() > 0, url);
+        assertTrue(doc.nestedTypes.stream().anyMatch(m -> m.name.equals("Map.Entry")), url);
       }
     }
   }

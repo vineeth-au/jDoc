@@ -35,7 +35,7 @@ class JavadocFixtureTest {
   void textOverloadsAndVarargsFollowTheGeneratedSummary(String release) throws IOException {
     Document page = fixture(release, "Text");
     DocModel doc = model(release, "Text", page);
-    assertEquals(2, doc.schemaVersion);
+    assertEquals(3, doc.schemaVersion);
     assertEquals("fixture.api.Text", doc.name);
     assertEquals(List.of("format", "valueOf", "valueOf"),
         doc.methods.stream().map(m -> m.name).toList());
@@ -44,6 +44,7 @@ class JavadocFixtureTest {
     assertEquals(List.of("char[]", "int", "int"), doc.methods.get(2).parameterTypes);
     assertEquals(List.of("String", "Object[]"), doc.methods.get(0).parameterTypes);
     assertEquals(2, doc.constructors.size());
+    assertEquals(List.of("MAX_VALUE"), doc.fields.stream().map(m -> m.name).toList());
     assertTrue(doc.methods.get(2).details.contains("Returns:\n  a new text value"));
 
     // Current v2 behavior flattens structured documentation into one string.
@@ -54,7 +55,7 @@ class JavadocFixtureTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"17", "21", "25"})
-  void sequenceCurrentlyShowsOnlyItsOwnMethods(String release) throws IOException {
+  void sequenceSeparatesDeclaredAndInheritedMethods(String release) throws IOException {
     Document page = fixture(release, "Sequence");
     assertEquals("BaseSequence.html#containsAll(java.util.Collection)",
         page.selectFirst("section.method-summary div.inherited-list a[href*=containsAll]")
@@ -67,6 +68,11 @@ class JavadocFixtureTest {
             .attr("href"));
     DocModel doc = model(release, "Sequence", page);
     assertEquals(List.of("add"), doc.methods.stream().map(m -> m.name).toList());
+    assertTrue(doc.inherited.stream().anyMatch(m -> m.name.equals("stream")
+        && m.declaringType.equals("fixture.api.SequenceView")));
+    assertTrue(doc.inherited.stream().anyMatch(m -> m.name.equals("containsAll")
+        && m.declaringType.equals("fixture.api.BaseSequence")));
+    assertFalse(doc.inherited.stream().anyMatch(m -> m.declaringType.equals("java.lang.Object")));
   }
 
   @ParameterizedTest
@@ -83,13 +89,15 @@ class JavadocFixtureTest {
 
   @ParameterizedTest
   @ValueSource(strings = {"17", "21", "25"})
-  void enumPageContainsConstantsButV2ModelsOnlyMethods(String release) throws IOException {
+  void enumPageModelsConstantsAndMethods(String release) throws IOException {
     Document page = fixture(release, "Unit");
     assertEquals(2, page.select("section.constants-summary .col-first a").size());
     DocModel doc = model(release, "Unit", page);
     assertEquals(List.of("label", "valueOf", "values"),
         doc.methods.stream().map(m -> m.name).toList());
     assertEquals(List.of("String"), doc.methods.get(1).parameterTypes);
+    assertEquals(List.of("FIRST", "SECOND"),
+        doc.enumConstants.stream().map(m -> m.name).toList());
   }
 
   @ParameterizedTest
@@ -104,5 +112,7 @@ class JavadocFixtureTest {
         doc.methods.stream().map(m -> m.name).toList());
     assertTrue(doc.methods.get(0).signature.contains("static"));
     assertTrue(doc.methods.get(2).signature.contains("default"));
+    assertEquals(List.of("Dictionary.Entry"),
+        doc.nestedTypes.stream().map(m -> m.name).toList());
   }
 }

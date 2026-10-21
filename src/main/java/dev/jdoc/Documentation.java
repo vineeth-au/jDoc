@@ -26,10 +26,18 @@ final class Documentation {
   private final Gson gson = new Gson();
 
   public Documentation() {
+    this(defaultRoot());
+  }
+
+  private static Path defaultRoot() {
     String override = System.getenv("JDOC_CACHE");
-    root = override == null || override.isEmpty()
+    return override == null || override.isEmpty()
         ? Paths.get(System.getProperty("user.home"), "Library", "Caches", "jDoc")
         : Paths.get(override);
+  }
+
+  Documentation(Path root) {
+    this.root = root;
   }
 
   Path versionPath(String version) {
@@ -98,18 +106,61 @@ final class Documentation {
 
   DocModel classDoc(String version, String name, String url) throws IOException {
     Path path = versionPath(version).resolve("classes").resolve(name + ".json");
+    DocModel older = null;
     if (Files.exists(path)) {
       try (Reader in = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
         DocModel doc = gson.fromJson(in, DocModel.class);
+        if (doc != null && doc.schemaVersion == 3 && doc.methods != null
+            && doc.constructors != null && doc.inherited != null && doc.fields != null) {
+          return doc;
+        }
         if (doc != null && doc.schemaVersion == 2 && doc.methods != null
             && doc.constructors != null) {
-          return doc;
+          older = doc;
         }
       }
     }
-    DocModel doc = JavadocParser.parse(fetch(url), name, url, version);
-    write(path, doc);
-    return doc;
+    try {
+      DocModel doc = JavadocParser.parse(fetch(url), name, url, version);
+      write(path, doc);
+      return doc;
+    } catch (IOException ex) {
+      if (older == null) {
+        throw ex;
+      }
+      older.stale = true;
+      return older;
+    }
+  }
+
+  DocModel.Method detail(String release, DocModel.Method member) throws IOException {
+    if (!member.inherited && !"nested type".equals(member.kind)) {
+      return member;
+    }
+    String qualified = member.inherited ? member.declaringType
+        : member.declaringType.substring(0, member.declaringType.lastIndexOf('.') + 1)
+            + member.name;
+    DocModel owner = classDoc(release, qualified, member.sourceUrl);
+    if ("nested type".equals(member.kind)) {
+      DocModel.Method nested = new DocModel.Method();
+      nested.name = member.name;
+      nested.kind = member.kind;
+      nested.signature = member.signature;
+      nested.description = owner.description;
+      nested.sourceUrl = owner.sourceUrl;
+      nested.declaringType = member.declaringType;
+      return nested;
+    }
+    for (DocModel.Method method : owner.methods) {
+      if (method.anchor.equals(member.anchor) ||
+          JavadocParser.key(method.name, method.parameterTypes)
+              .equals(JavadocParser.key(member.name, member.parameterTypes))) {
+        method.inherited = true;
+        return method;
+      }
+    }
+    throw new IOException("Documentation for " + member.name + " not found on "
+        + member.declaringType);
   }
 
   private Document fetch(String url) throws IOException {

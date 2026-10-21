@@ -25,9 +25,34 @@
 ## Commands and lookup
 
 - `jDoc --help` explains all commands, parameter rules, examples and keys.
-- `jDoc <Class>` browses the methods directly documented on its class page.
-  If the class declares no methods, show its class description and directly
-  documented constructors instead (for example, `jDoc Exception`).
+- `jDoc` without arguments opens the package browser in an interactive terminal.
+  Its home level is a flat list of fully qualified package names from the
+  selected release's class index. Typing at home searches both packages and
+  classes across the index; distinguish class results with their qualified
+  names. Opening a package lists its classes; opening a class result directly
+  opens its members, and Left Arrow returns to those home search results.
+  Without a terminal, show an instruction to
+  supply a class name or use `--help` instead of reading input.
+- Browse packages → classes → members → documentation with Right Arrow or
+  Enter. Left Arrow moves up one level; Escape always returns to package home;
+  `q` quits when not typing. Each level retains its search and selection when
+  returning. A named `jDoc <Class>` lookup opens at members; Left Arrow reaches
+  its class in the package browser. Fetch a class page only when it is opened.
+- A failed class-page fetch keeps the user at the class list with an error so
+  another class can be chosen. Keep one terminal/raw-mode session throughout.
+- `jDoc <Class>` browses directly documented methods, constructors, fields,
+  enum constants and nested types. If it declares no methods, show its class
+  description and constructors (for example, `jDoc Exception`).
+- Inherited methods are indexed from the requested class page and grouped by
+  declaring class/interface. Hide `java.lang.Object` methods. Deduplicate
+  overridden signatures in favor of the class, then nearest superclass,
+  then interfaces. Fetch declaring-class details only when requested.
+- Named lookups include inherited methods automatically. A name-only lookup
+  chooses a declared overload before an inherited one. `-p` listings remain
+  declared-only unless `-i` is supplied; exact named parameter lookup searches
+  both. The TUI collapses inherited methods until `i` is pressed.
+- If inherited details cannot be fetched offline, identify the declaring type
+  and report that details are unavailable rather than denying the method exists.
 - `jDoc <Class> -<method>` shows the first matching overload in the selected
   release's Javadoc **method-summary order**.
 - `jDoc <Class> -p <number>` shows directly documented methods with that
@@ -43,16 +68,15 @@
   a name. Non-interactive output gives suggestions without prompting.
 - Report methods absent in a selected release and list available overloads
   when an exact parameter lookup fails.
-- Exclude inherited methods. `-i` is reserved for a later release.
 
 ## Terminal presentation
 
 - Use JLine 4 with a Java 17-compatible artifact.
-- An unfiltered class lookup opens a scrollable, searchable method list in
-  Javadoc summary order. Rows show a signature and short description.
-- Typing filters methods by name or signature; Backspace edits the query.
-  Up/Down and Page Up/Down navigate, Enter reads a method's full documentation,
-  `b` returns to the list, and `q` quits. Show a status line with these keys.
+- An unfiltered class lookup opens a scrollable, searchable member list in
+  Javadoc summary order. Rows show the member kind, signature and description.
+- Typing filters the current level; Backspace edits the query. Up/Down and
+  Page Up/Down navigate. Right Arrow/Enter opens a selected item; Left Arrow
+  returns one level and Escape returns home. Show a status line with these keys.
 - Direct member lookups show their documentation without requiring a menu.
 - Use accessible, high-contrast colors: cyan for the class and release heading,
   bright white with a blue selection background for the current method, green

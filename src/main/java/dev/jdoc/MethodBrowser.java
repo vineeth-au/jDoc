@@ -1,8 +1,6 @@
 package dev.jdoc;
 
-import org.jline.terminal.Attributes;
 import org.jline.terminal.Terminal;
-import org.jline.terminal.TerminalBuilder;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
@@ -32,111 +30,89 @@ final class MethodBrowser {
       .background(AttributedStyle.BLUE).bold();
 
   private final DocModel doc;
+  private final Documentation docs;
   private final boolean colors;
-  private final State state;
-  private final boolean constructors;
+  private State state;
+  private boolean showInherited;
+  private DocModel.Method opened;
+  private String unavailable;
   private int detailScroll;
   private boolean detail;
   private boolean searching;
 
   MethodBrowser(DocModel doc) {
+    this(doc, new Documentation());
+  }
+
+  MethodBrowser(DocModel doc, Documentation docs) {
     this.doc = doc;
+    this.docs = docs;
     this.colors = System.getenv("NO_COLOR") == null;
-    this.constructors = doc.methods.isEmpty() && !doc.constructors.isEmpty();
-    this.state = new State(constructors ? doc.constructors : doc.methods);
+    this.state = new State(doc.declaredMembers());
   }
 
-  void run() throws IOException {
-    try (Terminal terminal = TerminalBuilder.builder().system(true).build()) {
-      Attributes original = terminal.enterRawMode();
-      PrintWriter writer = terminal.writer();
-      writer.print("\033[?1049h\033[?25l"); // Alternate screen, hidden cursor.
-      writer.flush();
-      try {
-        for (; ; ) {
-          render(terminal);
-          int key = readKey(terminal.reader());
-          if (key == -1 || key == 3) {
-            break;
-          }
-          if (!detail && !searching && key == 'q') {
-            break;
-          }
-          if (detail) {
-            if (key == 'q') {
-              break;
-            }
-            if (key == 'b' || key == 27) {
-              detail = false;
-              continue;
-            }
-            int page = Math.max(1, terminal.getHeight() - 5);
-            if (key == 1000) {
-              detailScroll = Math.max(0, detailScroll - 1);
-            }
-            if (key == 1001) {
-              detailScroll++;
-            }
-            if (key == 1002) {
-              detailScroll = Math.max(0, detailScroll - page);
-            }
-            if (key == 1003) {
-              detailScroll += page;
-            }
-            continue;
-          }
-          if (key == 27) {
-            searching = false;
-            continue;
-          }
-          if (key == '/') {
-            searching = true;
-            continue;
-          }
-          if (key == 1000) {
-            state.move(-1);
-            continue;
-          }
-          if (key == 1001) {
-            state.move(1);
-            continue;
-          }
-          if (key == 1002) {
-            state.move(-Math.max(1, terminal.getHeight() - 5));
-            continue;
-          }
-          if (key == 1003) {
-            state.move(Math.max(1, terminal.getHeight() - 5));
-            continue;
-          }
-          if (key == 10 || key == 13) {
-            if (state.selected() != null) {
-              detail = true;
-              detailScroll = 0;
-              searching = false;
-            }
-            continue;
-          }
-          if (key == 8 || key == 127) {
-            if (!state.query.isEmpty()) {
-              state.filter(state.query.substring(0, state.query.length() - 1));
-            }
-            continue;
-          }
-          if (key >= 32 && key != 127 && !Character.isISOControl(key)) {
-            state.filter(state.query + new String(Character.toChars(key)));
-            searching = true;
-          }
-        }
-      } finally {
-        writer.print("\033[0m\033[?25h\033[?1049l");
-        writer.flush();
-        terminal.setAttributes(original);
-      }
+  enum Navigation { STAY, BACK, HOME, QUIT }
+
+  Navigation handleKey(int key, int height) {
+    if (key == 27) {
+      return Navigation.HOME;
     }
+    if (key == 'q' && (detail || !searching)) {
+      return Navigation.QUIT;
+    }
+    if (detail) {
+      if (key == 1004 || key == 'b') {
+        detail = false;
+      } else {
+        int page = Math.max(1, height - 5);
+        if (key == 1000) detailScroll = Math.max(0, detailScroll - 1);
+        if (key == 1001) detailScroll++;
+        if (key == 1002) detailScroll = Math.max(0, detailScroll - page);
+        if (key == 1003) detailScroll += page;
+      }
+      return Navigation.STAY;
+    }
+    if (key == 1004 || key == 'b' && !searching) {
+      return Navigation.BACK;
+    }
+    if (key == 'i' && !searching && state.query.isEmpty()) {
+      showInherited = !showInherited;
+      List<DocModel.Method> visible = doc.declaredMembers();
+      if (showInherited) visible.addAll(doc.inherited);
+      state = new State(visible);
+    } else if (key == '/') {
+      searching = true;
+    } else if (key == 1000) {
+      state.move(-1);
+    } else if (key == 1001) {
+      state.move(1);
+    } else if (key == 1002) {
+      state.move(-Math.max(1, height - 5));
+    } else if (key == 1003) {
+      state.move(Math.max(1, height - 5));
+    } else if (key == 1005 || key == 10 || key == 13) {
+      if (state.selected() != null) {
+        unavailable = null;
+        opened = state.selected();
+        try {
+          opened = docs.detail(doc.release, opened);
+        } catch (IOException ex) {
+          unavailable = "Details unavailable (not cached or offline): " + ex.getMessage();
+        }
+        detail = true;
+        detailScroll = 0;
+        searching = false;
+      }
+    } else if (key == 8 || key == 127) {
+      if (!state.query.isEmpty()) state.filter(state.query.substring(0, state.query.length() - 1));
+    } else if (key >= 32 && key != 127 && !Character.isISOControl(key)) {
+      state.filter(state.query + new String(Character.toChars(key)));
+      searching = true;
+    }
+    return Navigation.STAY;
   }
 
-  private void render(Terminal terminal) {
+  void render(Terminal terminal) {
     PrintWriter out = terminal.writer();
     int width = Math.max(40, terminal.getColumns());
     int height = Math.max(10, terminal.getRows());
@@ -144,11 +120,12 @@ final class MethodBrowser {
         doc.methods.isEmpty() && doc.description != null && !doc.description.isEmpty();
     int viewport = height - (overview && !detail ? 6 : 5);
     out.print("\033[H\033[2J");
-    line(out, terminal, doc.name + "  ·  Java " + doc.release + " API", CYAN, width);
+    line(out, terminal, doc.name + "  ·  Java " + doc.release + " API"
+        + (doc.stale ? "  ·  older cache; reconnect to refresh" : ""), CYAN, width);
     if (detail) {
-      List<String> lines = detailLines(state.selected(), width);
+      List<String> lines = detailLines(opened, width);
       detailScroll = Math.max(0, Math.min(detailScroll, Math.max(0, lines.size() - viewport)));
-      line(out, terminal, (constructors ? "Constructor " : "Method ") + (state.cursor + 1) + "/"
+      line(out, terminal, (opened == null ? "Member" : opened.kind) + " " + (state.cursor + 1) + "/"
           + state.matches.size(), YELLOW, width);
       rule(out, terminal, width);
       for (int i = 0; i < viewport; i++) {
@@ -163,13 +140,13 @@ final class MethodBrowser {
         line(out, terminal, value, style, width);
       }
       rule(out, terminal, width);
-      line(out, terminal, "↑↓ Scroll  PgUp/PgDn Page  b Back  q Quit", MUTED, width);
+      line(out, terminal, "↑↓ Scroll  PgUp/PgDn Page  ← Back  Esc Home  q Quit", MUTED, width);
     } else {
       if (overview) {
         line(out, terminal, doc.description, MUTED, width);
       }
       line(out, terminal,
-          "Search " + (constructors ? "constructors" : "methods") + ": " + state.query
+          "Search members: " + state.query
               + (searching ? "_" : "  (type / to search)"), YELLOW, width);
       rule(out, terminal, width);
       state.keepVisible(viewport);
@@ -181,17 +158,25 @@ final class MethodBrowser {
           continue;
         }
         DocModel.Method method = state.matches.get(index);
-        String signature = shorten(listSignature(method), signatureWidth - 3);
-        String description = shorten(method.description, Math.max(0, width - signatureWidth - 4));
+        boolean groupStart = method.inherited && (index == 0
+            || !state.matches.get(index - 1).inherited
+            || !method.declaringType.equals(state.matches.get(index - 1).declaringType));
+        String label = groupStart ? "[Inherited from "
+            + method.declaringType.substring(method.declaringType.lastIndexOf('.') + 1) + "] "
+            : "[" + method.kind + "] ";
+        String signature = shorten(label + listSignature(method),
+            signatureWidth - 3);
+        String description = shorten(method.inherited ? "Inherited from " + method.declaringType
+            : method.description, Math.max(0, width - signatureWidth - 4));
         String row = String.format("%-" + signatureWidth + "s  %s", signature, description);
         lineHighlighted(out, terminal, (index == state.cursor ? "❯ " : "  ") + row,
             index == state.cursor ? SELECTED : GREEN, width, state.query);
       }
       rule(out, terminal, width);
       line(out, terminal,
-          state.matches.size() + (constructors ? " constructors" : " methods") + "  ·  " + (
-              state.matches.isEmpty() ? 0 : state.cursor + 1)
-              + "/" + state.matches.size() + "     ↑↓ Navigate  PgUp/PgDn Page  Enter Read  q Quit",
+          "i Inherited (" + doc.inherited.size() + (showInherited ? " shown" : " collapsed")
+              + ")  ·  " + (state.matches.isEmpty() ? 0 : state.cursor + 1)
+              + "/" + state.matches.size() + "  ← Classes  → Read  Esc Home  q Quit",
           MUTED, width);
     }
     out.flush();
@@ -203,10 +188,13 @@ final class MethodBrowser {
       return lines;
     }
     wrap(lines, method.signature, width - 2, "");
+    if (state.selected() != null && state.selected().inherited) {
+      wrap(lines, "Inherited from " + state.selected().declaringType, width - 2, "");
+    }
     lines.add("");
     wrap(lines, method.description, width - 2, "");
     lines.add("");
-    for (String entry : method.details.split("\n")) {
+    for (String entry : (method.details == null ? "" : method.details).split("\n")) {
       if (entry.startsWith("  ")) {
         wrap(lines, entry.trim(), width - 4, "  ");
       } else {
@@ -215,7 +203,12 @@ final class MethodBrowser {
       }
     }
     lines.add("");
-    wrap(lines, "Source: " + doc.sourceUrl + "#" + method.anchor, width - 2, "");
+    if (unavailable != null) {
+      wrap(lines, unavailable, width - 2, "");
+    }
+    String source = method.sourceUrl == null ? doc.sourceUrl : method.sourceUrl;
+    wrap(lines, "Source: " + source + (method.anchor == null ? "" : "#" + method.anchor),
+        width - 2, "");
     return lines;
   }
 
@@ -246,6 +239,9 @@ final class MethodBrowser {
   }
 
   static String listSignature(DocModel.Method method) {
+    if (!"method".equals(method.kind) && !"constructor".equals(method.kind)) {
+      return method.name;
+    }
     int open = method.signature.indexOf('(');
     int close = method.signature.indexOf(')', open);
     return open >= 0 && close >= 0 ? method.name + method.signature.substring(open, close + 1)
@@ -315,6 +311,8 @@ final class MethodBrowser {
       case "B" -> 1001;
       case "5~" -> 1002;
       case "6~" -> 1003;
+      case "D" -> 1004;
+      case "C" -> 1005;
       default -> -2; // An arrow/unknown sequence is not a standalone Escape.
     };
   }
