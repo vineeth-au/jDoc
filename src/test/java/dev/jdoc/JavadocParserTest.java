@@ -26,22 +26,17 @@ class JavadocParserTest {
     }
 
     @Test
-    void java8And11AnchorsOutsideDetailListAreResolved() {
-        for (String release : Arrays.asList("8", "11")) {
-            String attribute = release.equals("8") ? "name" : "id";
-            String anchor = release.equals("8") ? "valueOf-char:A-int-int-" : "valueOf(char[],int,int)";
-            String html = "<div class='summary'><table class='memberSummary'><tr><th><a href='#" + anchor
-                    + "'>valueOf</a></th></tr></table></div>"
-                    + "<div class='details'><a " + attribute + "='" + anchor + "'></a><ul><li class='blockList'>"
-                    + "<h4>valueOf</h4><pre>public static String valueOf\u200b(char[] data, int offset, int count)</pre>"
-                    + "<div class='block'>Creates a string.</div><dl><dt>Returns:</dt><dd>a String</dd></dl>"
-                    + "</li></ul></div>";
-            DocModel doc = JavadocParser.parse(Jsoup.parse(html), "java.lang.String", "url", release);
-            assertEquals(1, doc.methods.size(), release);
-            assertEquals(Arrays.asList("char[]", "int", "int"), doc.methods.get(0).parameterTypes);
-            assertTrue(doc.methods.get(0).details.contains("Returns:\n  a String"));
-            assertFalse(doc.methods.get(0).signature.contains("\u200b"));
-        }
+    void modernMethodDetailsIncludeTagsAndNormalizeSignatures() {
+        String html = "<section class='method-summary'><a href='#valueOf(char[],int,int)'>valueOf</a></section>"
+                + "<section class='method-details'><section class='detail' id='valueOf(char[],int,int)'>"
+                + "<h3>valueOf</h3><div class='member-signature'>public static String valueOf\u200b(char[] data, int offset, int count)</div>"
+                + "<div class='block'>Creates a string.</div><dl><dt>Returns:</dt><dd>a String</dd></dl>"
+                + "</section></section>";
+        DocModel doc = JavadocParser.parse(Jsoup.parse(html), "java.lang.String", "url", "21");
+        assertEquals(1, doc.methods.size());
+        assertEquals(Arrays.asList("char[]", "int", "int"), doc.methods.get(0).parameterTypes);
+        assertTrue(doc.methods.get(0).details.contains("Returns:\n  a String"));
+        assertFalse(doc.methods.get(0).signature.contains("\u200b"));
     }
 
     @Test
@@ -71,17 +66,4 @@ class JavadocParserTest {
         assertEquals(Arrays.asList("String"), doc.constructors.get(1).parameterTypes);
     }
 
-    @Test
-    void legacyConstructorAnchorAndOldCacheAreHandled() {
-        String html = "<div class='description'><div class='block'>A checked exception.</div></div>"
-                + "<div class='summary'><table class='memberSummary'><a href='#Exception--'>Exception</a></table></div>"
-                + "<div class='details'><a name='Exception--'></a><ul><li class='blockList'>"
-                + "<h4>Exception</h4><pre>public Exception()</pre><div class='block'>Empty.</div>"
-                + "</li></ul></div>";
-        DocModel doc = JavadocParser.parse(Jsoup.parse(html), "java.lang.Exception", "url", "8");
-        assertEquals(1, doc.constructors.size());
-        assertTrue(doc.methods.isEmpty());
-        assertEquals("A checked exception.", doc.description);
-        assertEquals(0, new com.google.gson.Gson().fromJson("{\"methods\":[]}", DocModel.class).schemaVersion);
-    }
 }

@@ -21,17 +21,14 @@ final class JavadocParser {
     doc.name = name;
     doc.sourceUrl = url;
     doc.release = release;
-    Element classBlock = page.selectFirst(release.equals("8") || release.equals("11")
-        ? "div.description div.block" : "section.class-description div.block");
+    Element classBlock = page.selectFirst("section.class-description div.block");
     doc.description = classBlock == null ? "" : classBlock.text().trim();
     Map<String, DocModel.Method> methodDetails = new LinkedHashMap<>();
     Map<String, DocModel.Method> constructorDetails = new LinkedHashMap<>();
-    boolean old = release.equals("8") || release.equals("11");
-    String selector = old ? "div.details li.blockList:has(> h4):has(> pre)"
-        : "section.method-details section.detail:has(> h3), section.constructor-details section.detail:has(> h3)";
+    String selector = "section.method-details section.detail:has(> h3), section.constructor-details section.detail:has(> h3)";
     for (Element item : page.select(selector)) {
-      Element title = item.selectFirst(old ? "> h4" : "> h3");
-      Element signature = item.selectFirst(old ? "> pre" : "div.member-signature");
+      Element title = item.selectFirst("> h3");
+      Element signature = item.selectFirst("div.member-signature");
       if (title == null || signature == null) {
         continue;
       }
@@ -41,7 +38,7 @@ final class JavadocParser {
       if (!declaration.contains("(")) {
         continue;
       }
-      String anchor = old ? anchorFromNamedElement(item) : item.id();
+      String anchor = item.id();
       if (anchor.isEmpty()) {
         continue;
       }
@@ -69,10 +66,8 @@ final class JavadocParser {
     }
 
     // The detail sections can be in source order. The summary is the user-visible order.
-    order(page, old ? "table.memberSummary a[href]" : "section.method-summary a[href]",
-        methodDetails, doc.methods);
-    order(page, old ? "table.memberSummary a[href]" : "section.constructor-summary a[href]",
-        constructorDetails, doc.constructors);
+    order(page, "section.method-summary a[href]", methodDetails, doc.methods);
+    order(page, "section.constructor-summary a[href]", constructorDetails, doc.constructors);
     return doc;
   }
 
@@ -96,19 +91,6 @@ final class JavadocParser {
         output.add(entry.getValue());
       }
     }
-  }
-
-  private static String anchorFromNamedElement(Element item) {
-    Element named = item.selectFirst("a[name]");
-    if (named != null) {
-      return named.attr("name");
-    }
-    // Javadoc 8/11 place the overload anchor immediately before the method's <ul>.
-    Element previous = item.parent() == null ? null : item.parent().previousElementSibling();
-    if (previous != null && previous.tagName().equals("a")) {
-      return previous.hasAttr("name") ? previous.attr("name") : previous.id();
-    }
-    return "";
   }
 
   private static String decode(String anchor) {

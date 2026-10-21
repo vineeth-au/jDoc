@@ -292,7 +292,7 @@ final class MethodBrowser {
     return max > 1 ? text.substring(0, max - 1) + "…" : "…";
   }
 
-  private static int readKey(NonBlockingReader input) throws IOException {
+  static int readKey(NonBlockingReader input) throws IOException {
     int first = input.read();
     if (first != 27) {
       return first;
@@ -302,19 +302,21 @@ final class MethodBrowser {
     }
     input.read();
     int code = input.read(70);
-    if (code == 'A') {
-      return 1000;
-    }
-    if (code == 'B') {
-      return 1001;
-    }
-    if (code == '5' || code == '6') {
-      if (input.peek(70) == '~') {
-        input.read();
+    StringBuilder sequence = new StringBuilder();
+    for (int i = 0; i < 16 && code >= 0; i++) {
+      sequence.append((char) code);
+      if (code >= 0x40 && code <= 0x7e) {
+        break;
       }
-      return code == '5' ? 1002 : 1003;
+      code = input.read(70);
     }
-    return 27;
+    return switch (sequence.toString()) {
+      case "A" -> 1000;
+      case "B" -> 1001;
+      case "5~" -> 1002;
+      case "6~" -> 1003;
+      default -> -2; // An arrow/unknown sequence is not a standalone Escape.
+    };
   }
 
   static final class State {

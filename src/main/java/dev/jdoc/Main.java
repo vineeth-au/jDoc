@@ -42,10 +42,15 @@ public final class Main {
     if (args[0].equals("--versions")) {
       requireLength(args, 1);
       String current = selection();
+      boolean automatic = current == null;
+      if (automatic) {
+        current = automaticSelection().version;
+      }
       System.out.println("Java documentation releases:");
       for (String version : Versions.SUPPORTED) {
         System.out.printf("  %-3s %-9s index: %-6s cached classes: %d%n", version,
-            version.equals(current) ? "(selected)" : "", docs.indexed(version) ? "yes" : "no",
+            version.equals(current) ? (automatic ? "(auto)" : "(selected)") : "",
+            docs.indexed(version) ? "yes" : "no",
             docs.cachedCount(version));
       }
       return;
@@ -64,8 +69,9 @@ public final class Main {
     }
     String version = selection();
     if (version == null) {
-      throw new IllegalArgumentException(
-          "No documentation version selected. Run jDoc --versions, then jDoc --docVersion 17.");
+      Versions.Selection automatic = automaticSelection();
+      version = automatic.version;
+      System.err.println("jDoc: " + automatic.notice() + " Change with --docVersion <release>.");
     }
     Map<String, String> index;
     try {
@@ -250,6 +256,11 @@ public final class Main {
     return Versions.SUPPORTED.contains(value) ? value : null;
   }
 
+  private static Versions.Selection automaticSelection() {
+    return Versions.detect(System.getenv("JAVA_HOME"),
+        System.getProperty("java.specification.version"));
+  }
+
   private void present(String text) throws IOException {
     if (System.console() != null && System.getenv("NO_COLOR") == null) {
       text = colorize(text);
@@ -303,8 +314,8 @@ public final class Main {
     System.out.println("""
         jDoc — terminal Java API documentation
         Usage:
-          jDoc --docVersion               Select the default documentation release.
-                                          Currently Supported versions are 8,11,17,21 and 25
+          jDoc --docVersion <release>     Select the default documentation release.
+                                          Supported versions: 17, 21, 25
           jDoc --versions                 Show supported releases and cached status
           jDoc --version | -v             Show the application version
           jDoc --help                     Show this help
@@ -325,6 +336,8 @@ public final class Main {
                   jDoc String valueOf -p 3
                   jDoc String valueOf -p char-array, int, int
 
+        Without a saved selection, JAVA_HOME (or the running Java) selects the
+        closest supported documentation release no newer than that Java version.
         Pages and the class index are fetched on demand and cached locally.""");
   }
 }

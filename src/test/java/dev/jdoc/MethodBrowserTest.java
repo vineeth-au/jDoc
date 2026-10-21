@@ -2,7 +2,9 @@ package dev.jdoc;
 
 import dev.jdoc.DocModel.Method;
 import org.junit.jupiter.api.Test;
+import org.jline.utils.NonBlockingReader;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -38,6 +40,43 @@ class MethodBrowserTest {
         String colored = Main.colorize(text);
         assertTrue(colored.contains("\u001b["));
         assertEquals(text, org.jline.utils.AttributedString.stripAnsi(colored));
+    }
+
+    @Test
+    void rightArrowDoesNotReturnEscapeFromDocumentation() throws IOException {
+        assertEquals(27, MethodBrowser.readKey(reader("\033")));
+        assertEquals(-2, MethodBrowser.readKey(reader("\033[C")));
+        assertEquals(-2, MethodBrowser.readKey(reader("\033[D")));
+        assertEquals(-2, MethodBrowser.readKey(reader("\033[1;5C")));
+        assertEquals(1000, MethodBrowser.readKey(reader("\033[A")));
+        assertEquals(1002, MethodBrowser.readKey(reader("\033[5~")));
+    }
+
+    private static NonBlockingReader reader(String keys) {
+        return new NonBlockingReader() {
+            int position;
+
+            @Override
+            protected int read(long timeout, boolean peek) {
+                if (position >= keys.length()) {
+                    return -1;
+                }
+                int character = keys.charAt(position);
+                if (!peek) {
+                    position++;
+                }
+                return character;
+            }
+
+            @Override
+            public int readBuffered(char[] buffer, int offset, int length, long timeout) {
+                if (position >= keys.length()) {
+                    return -1;
+                }
+                buffer[offset] = (char) read(timeout, false);
+                return 1;
+            }
+        };
     }
 
     private static DocModel.Method method(String signature) {

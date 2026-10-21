@@ -10,9 +10,11 @@
 
 ## Documentation versions and caching
 
-- Initially support documentation releases 8, 11, 17, 21, and 25.
+- Support documentation releases 17, 21, and 25.
 - `jDoc --docVersion 17` persistently selects the default documentation release.
-  Until one is selected, lookups explain how to select one.
+  Without a saved choice, use `JAVA_HOME` when valid or the running JVM otherwise;
+  select the closest supported release no newer than the detected Java version.
+  Report the automatic choice on stderr without saving it.
 - `jDoc --versions` lists supported releases, the current selection, and cache
   status. `jDoc --version` and `jDoc -v` show the application version.
 - Fetch a release's class index and individual requested class pages on demand.
