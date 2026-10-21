@@ -1,6 +1,6 @@
 # jDoc
 
-jDoc is a macOS command-line browser for Java API documentation. Look up JDK classes by short name, browse their documented methods and constructors, and choose a documentation release independently of your installed Java version.
+jDoc is a macOS command-line (TUI) browser for viewing Java API documentation. Look up JDK classes by short name, browse their documented methods and constructors, and choose a documentation release independently of your installed Java version.
 
 ## Requirements
 
@@ -44,4 +44,3 @@ Bug reports and pull requests are welcome. Run `mvn test` before submitting a ch
 ## License
 
 [MIT](LICENSE).
-I used mvn because that is the build command already documented; once the copied Maven wrapper is verified in CI, you can replace it with ./mvnw throughout.
