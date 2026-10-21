@@ -116,8 +116,8 @@ public final class Main {
           "Could not load " + name + " (network required if uncached): " + ex.getMessage(), ex);
     }
     if (doc.stale) {
-      System.err.println("jDoc: Using older cached documentation; reconnect to refresh inherited "
-          + "methods, fields, and nested types.");
+      System.err.println("jDoc: Using older cached documentation; reconnect to refresh "
+          + "member coverage, formatting, links, and metadata.");
     }
     if (memberArgs.length == 0 && System.console() != null) {
       new BrowserSession(docs, index, version, doc).run();
@@ -142,7 +142,7 @@ public final class Main {
         name + " — Java " + version + " documentation\n" + doc.sourceUrl + "\n\n");
     if (memberArgs.length == 0 && doc.methods.isEmpty() && doc.description != null
         && !doc.description.isEmpty()) {
-      out.append(doc.description).append("\n\n");
+      out.append(String.join("\n", DocRenderer.classLines(doc, 100))).append("\n\n");
     }
     if (methods.isEmpty()) {
       out.append("No documented members.\n");
@@ -164,22 +164,13 @@ public final class Main {
       if (method.inherited) {
         out.append("Inherited from ").append(method.declaringType).append('\n');
       }
-      out.append(displayed.kind).append(": ").append(displayed.signature).append('\n');
-      if (displayed.description != null && !displayed.description.isEmpty()) {
-        out.append("  ").append(displayed.description).append('\n');
-      }
-      if (displayed.details != null && !displayed.details.isEmpty()) {
-        out.append(displayed.details).append('\n');
+      List<String> lines = DocRenderer.methodLines(displayed, 100, doc.sourceUrl);
+      if (!lines.isEmpty()) {
+        out.append(displayed.kind).append(": ").append(lines.get(0)).append('\n');
+        for (int i = 1; i < lines.size(); i++) out.append(lines.get(i)).append('\n');
       }
       if (unavailable != null) {
         out.append(unavailable).append('\n');
-      }
-      if (displayed.sourceUrl != null) {
-        out.append(displayed.sourceUrl);
-        if (displayed.anchor != null) {
-          out.append('#').append(displayed.anchor);
-        }
-        out.append('\n');
       }
       out.append('\n');
     }
@@ -347,7 +338,9 @@ public final class Main {
           From home, type String to find a class across all packages.
           Type to filter (/ starts search); Backspace edits the query.
           ↑↓ Navigate  PgUp/PgDn Page  →/Enter Open  ← Back one level
-          Esc Package home  q Quit (when not typing); i toggles inherited methods.
+          Esc leaves search; otherwise goes to package home. q quits when not typing.
+          i toggles inherited methods.
+          C reads the class description from the member list.
 
         Colors are disabled by NO_COLOR or when output is redirected.
         A number after -p/--params is a parameter COUNT, not an overload number.

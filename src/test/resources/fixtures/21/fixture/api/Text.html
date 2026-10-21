@@ -247,8 +247,14 @@
  <a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html" title="class or interface in java.lang" class="external-link">Object</a>...&nbsp;values)</span></div>
 <div class="block">Format arguments.
  <p>Example:</p>
- <pre><code>Text.format("%s", "hello");</code></pre>
- <ul><li>Retains the first value.</li><li>Accepts more values.</li></ul></div>
+ <pre><code>
+ Text value = Text.format("%s", "hello");
+ if (value != null) {
+   System.out.println(value);
+ }
+ </code></pre>
+ <ul><li>Retains the first value.</li><li>Accepts more values.</li></ul>
+ <p>See <a href="Dictionary.Entry.html" title="class in fixture.api"><code>Dictionary.Entry</code></a> for a related nested type.</p></div>
 <dl class="notes">
 <dt>Since:</dt>
 <dd>17</dd>

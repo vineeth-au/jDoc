@@ -13,17 +13,25 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 final class JavadocParser {
 
   static DocModel parse(Document page, String name, String url, String release) {
     DocModel doc = new DocModel();
-    doc.schemaVersion = 3;
+    doc.schemaVersion = 4;
     doc.name = name;
     doc.sourceUrl = url;
     doc.release = release;
     Element classBlock = page.selectFirst("section.class-description div.block");
     doc.description = classBlock == null ? "" : classBlock.text().trim();
+    doc.classBody = ContentParser.parse(classBlock, name, release);
+    Element classSection = page.selectFirst("section.class-description");
+    doc.since = since(classSection);
+    doc.deprecated = deprecated(classSection);
+    doc.deprecatedSince = deprecatedSince(classSection);
+    doc.preview = preview(classSection);
     Map<String, DocModel.Method> methodDetails = new LinkedHashMap<>();
     Map<String, DocModel.Method> constructorDetails = new LinkedHashMap<>();
     Map<String, DocModel.Method> fieldDetails = new LinkedHashMap<>();
@@ -61,15 +69,32 @@ final class JavadocParser {
       }
       Element block = item.selectFirst("div.block");
       method.description = block == null ? "" : block.text().trim();
+      method.body = ContentParser.parse(block, name, release);
+      method.since = since(item);
+      method.deprecated = deprecated(item);
+      method.deprecatedSince = deprecatedSince(item);
+      method.preview = preview(item);
+      Element deprecation = item.selectFirst("div.deprecation-comment");
+      if (deprecation != null) {
+        method.body.add(0, ContentParser.label("Deprecated:"));
+        method.body.addAll(1, ContentParser.parse(deprecation, name, release));
+      }
       StringBuilder notes = new StringBuilder();
       for (Element tag : item.select("dl > dt")) {
         String label = tag.text().trim();
         if (!label.isEmpty()) {
           notes.append(label).append('\n');
+          if (!label.equals("Since:")) method.body.add(ContentParser.label(label));
         }
         for (Element next = tag.nextElementSibling(); next != null && next.tagName().equals("dd");
             next = next.nextElementSibling()) {
           notes.append("  ").append(next.text().trim()).append('\n');
+          if (!label.equals("Since:")) {
+            DocModel.Block note = new DocModel.Block();
+            note.kind = "note";
+            note.items.add(ContentParser.parse(next, name, release));
+            method.body.add(note);
+          }
         }
       }
       method.details = notes.toString().trim();
@@ -92,11 +117,47 @@ final class JavadocParser {
       Element summary = link.closest("div.col-second");
       if (summary != null && summary.nextElementSibling() != null) {
         nested.description = summary.nextElementSibling().text().trim();
+        nested.body = ContentParser.parse(summary.nextElementSibling(), name, release);
       }
       doc.nestedTypes.add(nested);
     }
     inherited(page, doc);
     return doc;
+  }
+
+  private static String since(Element root) {
+    if (root == null) return null;
+    for (Element tag : root.select("dl.notes > dt")) {
+      if (tag.text().trim().equals("Since:")) {
+        Element value = tag.nextElementSibling();
+        return value == null ? null : value.text().trim();
+      }
+    }
+    return null;
+  }
+
+  private static boolean deprecated(Element root) {
+    return root != null && (root.selectFirst(".deprecated-label") != null
+        || root.selectFirst(".deprecation-block") != null
+        || annotation(root) != null && annotation(root).text().contains("@Deprecated"));
+  }
+
+  private static String deprecatedSince(Element root) {
+    if (root == null) return null;
+    Element annotation = annotation(root);
+    if (annotation == null) return null;
+    Matcher match = Pattern.compile("@Deprecated\\s*\\([^)]*since\\s*=\\s*\"([^\"]+)\"")
+        .matcher(annotation.text());
+    return match.find() ? match.group(1) : null;
+  }
+
+  private static Element annotation(Element root) {
+    return root == null ? null : root.selectFirst(
+        ".member-signature .annotations, .type-signature .annotations");
+  }
+
+  private static boolean preview(Element root) {
+    return root != null && root.selectFirst(".preview-label, .preview-block") != null;
   }
 
   private static void inherited(Document page, DocModel doc) {

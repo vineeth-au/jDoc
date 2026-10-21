@@ -110,12 +110,13 @@ final class Documentation {
     if (Files.exists(path)) {
       try (Reader in = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
         DocModel doc = gson.fromJson(in, DocModel.class);
-        if (doc != null && doc.schemaVersion == 3 && doc.methods != null
-            && doc.constructors != null && doc.inherited != null && doc.fields != null) {
+        if (doc != null && doc.schemaVersion == 4 && doc.methods != null
+            && doc.constructors != null && doc.inherited != null && doc.fields != null
+            && doc.classBody != null) {
           return doc;
         }
-        if (doc != null && doc.schemaVersion == 2 && doc.methods != null
-            && doc.constructors != null) {
+        if (doc != null && (doc.schemaVersion == 2 || doc.schemaVersion == 3)
+            && doc.methods != null && doc.constructors != null) {
           older = doc;
         }
       }
@@ -147,6 +148,11 @@ final class Documentation {
       nested.kind = member.kind;
       nested.signature = member.signature;
       nested.description = owner.description;
+      nested.body = owner.classBody;
+      nested.since = owner.since;
+      nested.deprecated = owner.deprecated;
+      nested.deprecatedSince = owner.deprecatedSince;
+      nested.preview = owner.preview;
       nested.sourceUrl = owner.sourceUrl;
       nested.declaringType = member.declaringType;
       return nested;

@@ -67,6 +67,38 @@ class MethodBrowserTest {
         assertEquals(MethodBrowser.Navigation.HOME, browser.handleKey(27, 24));
     }
 
+    @Test
+    void uppercaseCOpensClassDocumentationWithoutStealingLowercaseSearch() {
+        DocModel doc = new DocModel();
+        doc.name = "java.lang.String";
+        doc.release = "17";
+        doc.methods.add(method("clear()"));
+        MethodBrowser browser = new MethodBrowser(doc);
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey('c', 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey('q', 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey('C', 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1004, 24));
+        assertEquals(MethodBrowser.Navigation.BACK, browser.handleKey(1004, 24));
+
+        MethodBrowser fresh = new MethodBrowser(doc);
+        fresh.handleKey('/', 24);
+        assertEquals(MethodBrowser.Navigation.STAY, fresh.handleKey('C', 24));
+        assertEquals(MethodBrowser.Navigation.STAY, fresh.handleKey(1004, 24));
+        assertEquals(MethodBrowser.Navigation.BACK, fresh.handleKey(1004, 24));
+    }
+
+    @Test
+    void firstEscapeLeavesSearchAndSecondEscapeGoesHome() {
+        DocModel doc = new DocModel();
+        doc.name = "java.lang.String";
+        doc.methods.add(method("repeat(int count)"));
+        MethodBrowser browser = new MethodBrowser(doc);
+        browser.handleKey('/', 24);
+        browser.handleKey('r', 24);
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(27, 24));
+        assertEquals(MethodBrowser.Navigation.HOME, browser.handleKey(27, 24));
+    }
+
     private static NonBlockingReader reader(String keys) {
         return new NonBlockingReader() {
             int position;

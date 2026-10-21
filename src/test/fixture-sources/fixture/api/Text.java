@@ -27,8 +27,14 @@ public class Text {
 
   /** Format arguments.
    * <p>Example:</p>
-   * <pre>{@code Text.format("%s", "hello");}</pre>
+   * <pre>{@code
+   * Text value = Text.format("%s", "hello");
+   * if (value != null) {
+   *   System.out.println(value);
+   * }
+   * }</pre>
    * <ul><li>Retains the first value.</li><li>Accepts more values.</li></ul>
+   * <p>See {@link Dictionary.Entry} for a related nested type.</p>
    * @since 17
    */
   public static Text format(String template, Object... values) { return new Text(); }

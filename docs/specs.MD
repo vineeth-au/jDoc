@@ -20,6 +20,10 @@
 - Fetch a release's class index and individual requested class pages on demand.
   Cache extracted signatures and documentation by release, not full archives.
   Cached class lookups work offline. Show the selected release and source URL.
+- Schema v4 stores class and member prose as paragraphs, code blocks, lists,
+  and links with a class name plus anchor (or an external URL), along with
+  `since`, deprecation, and preview metadata. Older cached pages refresh on
+  demand; when offline, show the older data with an incompleteness notice.
 - `jDoc --java 17 String` is invalid; use `--docVersion` for documentation.
 
 ## Commands and lookup
@@ -34,7 +38,8 @@
   Without a terminal, show an instruction to
   supply a class name or use `--help` instead of reading input.
 - Browse packages → classes → members → documentation with Right Arrow or
-  Enter. Left Arrow moves up one level; Escape always returns to package home;
+  Enter. Left Arrow moves up one level; Escape first leaves an active search
+  while retaining its results, and otherwise returns to package home;
   `q` quits when not typing. Each level retains its search and selection when
   returning. A named `jDoc <Class>` lookup opens at members; Left Arrow reaches
   its class in the package browser. Fetch a class page only when it is opened.
@@ -76,7 +81,13 @@
   Javadoc summary order. Rows show the member kind, signature and description.
 - Typing filters the current level; Backspace edits the query. Up/Down and
   Page Up/Down navigate. Right Arrow/Enter opens a selected item; Left Arrow
-  returns one level and Escape returns home. Show a status line with these keys.
+  returns one level and Escape leaves search or returns home. Show a status line
+  with these keys.
+- Preserve paragraphs, code indentation and list items in detail views and
+  plain output. Display `Since`, `Deprecated`, and `Preview` as text labels when
+  present; a missing `@since` is unknown. Press `C` in the member list to read
+  the full class description. Display resolved link targets without treating
+  them as raw HTML hrefs.
 - Direct member lookups show their documentation without requiring a menu.
 - Use accessible, high-contrast colors: cyan for the class and release heading,
   bright white with a blue selection background for the current method, green
