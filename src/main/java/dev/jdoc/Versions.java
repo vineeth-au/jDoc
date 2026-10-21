@@ -25,8 +25,25 @@ final class Versions {
     return "https://docs.oracle.com/en/java/javase/" + version + "/docs/api/";
   }
 
-  static String index(String version) {
-    return base(version) + "allclasses-index.html";
+  static String typeIndex(String version) {
+    return base(version) + "type-search-index.js";
+  }
+
+  static String memberIndex(String version) {
+    return base(version) + "member-search-index.js";
+  }
+
+  static String packageIndex(String version) {
+    return base(version) + "package-search-index.js";
+  }
+
+  static String supportedFor(int major) {
+    if (major < 17) {
+      throw new IllegalArgumentException("Project targets Java " + major
+          + "; jDoc supports documentation releases 17, 21, and 25."
+          + " Use --docVersion to override the project target.");
+    }
+    return closest(major);
   }
 
   static Selection detect(String javaHome, String runtimeVersion) {

@@ -40,10 +40,12 @@ class VersionsTest {
 
   @Test
   void onlyModernReleasesAreSupported() {
-    assertEquals("https://docs.oracle.com/en/java/javase/17/docs/api/allclasses-index.html",
-        Versions.index("17"));
-    assertThrows(IllegalArgumentException.class, () -> Versions.index("8"));
-    assertThrows(IllegalArgumentException.class, () -> Versions.index("11"));
+    assertEquals("https://docs.oracle.com/en/java/javase/17/docs/api/type-search-index.js",
+        Versions.typeIndex("17"));
+    assertThrows(IllegalArgumentException.class, () -> Versions.typeIndex("8"));
+    assertThrows(IllegalArgumentException.class, () -> Versions.typeIndex("11"));
     assertThrows(IllegalArgumentException.class, () -> Versions.detect(null, "11"));
+    assertEquals("21", Versions.supportedFor(22));
+    assertThrows(IllegalArgumentException.class, () -> Versions.supportedFor(11));
   }
 }

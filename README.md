@@ -25,11 +25,15 @@ downloads the class index; a class page is fetched only when you open that class
 Subsequent lookups of cached classes work offline.
 
 **Supported documentation releases:** Java 17, 21, and 25. Without a saved
-selection, jDoc detects the version in `JAVA_HOME` (or the running Java if
-`JAVA_HOME` is unavailable or unusable). It picks the closest supported release
-no newer than that version; for example, Java 22 selects Java 21 documentation.
-The automatic choice is reported on stderr and is not saved. Use
-`./jDoc --docVersion 21` to select a different release persistently.
+selection, jDoc checks Maven `pom.xml` or Gradle `build.gradle[.kts]` in the
+current directory and its parents. `maven.compiler.release` and Gradle
+`options.release` take priority over toolchain settings. If no static project
+target is found, it uses `JAVA_HOME`, then the running Java. It selects the
+closest supported release no newer than the detected version (Java 22 selects
+Java 21 docs) and reports the source on stderr. `targetCompatibility` and
+`maven.compiler.target` are weaker bytecode settings; they do not restrict APIs.
+Build scripts are read, never executed. Use `./jDoc --docVersion 21` to save an
+explicit preference, or `./jDoc --docVersion 21 java.util.List -getFirst` for one lookup.
 
 ## Examples
 
@@ -48,6 +52,8 @@ The automatic choice is reported on stderr and is not saved. Use
 | `./jDoc Integer.MAX_VALUE` | Show a field |
 | `./jDoc TimeUnit.SECONDS` | Show an enum constant |
 | `./jDoc Map Entry` | Show a nested type |
+| `./jDoc -m computeIfAbsent` | List classes documenting that method |
+| `./jDoc --docVersion 21 java.util.List -getFirst` | Use Java 21 docs for one lookup |
 | `./jDoc --help` | Show all options |
 
 In the browser, type to search packages and classes from home, or to filter the
@@ -64,6 +70,11 @@ With no terminal, provide a class name for plain-text output. Set `NO_COLOR=1`
 to disable color, or `JDOC_CACHE` to choose a different cache directory.
 
 jDoc currently searches JDK documentation, not project dependencies. Methods inherited from `Object` are hidden in the class browser.
+If a lookup fails, jDoc checks **other cached releases** for that class or
+member and identifies a declaring type when a cached class page confirms it.
+An uncached release is reported as unknown rather than incorrectly called absent.
+Type and package search indexes are downloaded on first use of a release; the
+larger member index is fetched only for reverse member search.
 
 ## Contributing
 
