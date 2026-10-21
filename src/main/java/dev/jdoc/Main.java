@@ -45,38 +45,37 @@ public final class Main {
     }
     if (args.length > 0 && args[0].equals("--versions")) {
       requireLength(args, 1);
-      String current = selection();
-      boolean automatic = current == null;
-      if (automatic) {
-        current = automaticSelection().version;
-      }
+      VersionChoice choice = chooseVersion();
       System.out.println("Java documentation releases:");
       for (String version : Versions.SUPPORTED) {
         System.out.printf("  %-3s %-9s index: %-6s cached classes: %d%n", version,
-            version.equals(current) ? (automatic ? "(auto)" : "(selected)") : "",
+            version.equals(choice.version) ? choice.label : "",
             docs.indexed(version) ? "yes" : "no",
             docs.cachedCount(version));
       }
       return;
     }
+    String override = null;
     if (args.length > 0 && (args[0].equals("--docVersion") || args[0].equals("--doc-version"))) {
-      requireLength(args, 2);
+      if (args.length < 2) throw new IllegalArgumentException("Expected --docVersion <release>.");
       Versions.base(args[1]);
-      Files.createDirectories(selected.getParent());
-      Files.write(selected, Arrays.asList(args[1]), StandardCharsets.UTF_8);
-      System.out.println(
-          "Selected Java " + args[1] + " documentation. Pages will be fetched on demand.");
-      return;
+      if (args.length == 2) {
+        Files.createDirectories(selected.getParent());
+        Files.write(selected, Arrays.asList(args[1]), StandardCharsets.UTF_8);
+        System.out.println(
+            "Selected Java " + args[1] + " documentation. Pages will be fetched on demand.");
+        return;
+      }
+      override = args[1];
+      args = Arrays.copyOfRange(args, 2, args.length);
     }
     if (args.length > 0 && args[0].equals("--java")) {
       throw new IllegalArgumentException("Use --docVersion <release> to select documentation.");
     }
-    String version = selection();
-    if (version == null) {
-      Versions.Selection automatic = automaticSelection();
-      version = automatic.version;
-      System.err.println("jDoc: " + automatic.notice() + " Change with --docVersion <release>.");
-    }
+    VersionChoice choice = override == null ? chooseVersion()
+        : new VersionChoice(override, "(selected)", null);
+    String version = choice.version;
+    if (choice.notice != null) System.err.println("jDoc: " + choice.notice);
     Map<String, String> index;
     try {
       index = docs.index(version);
@@ -87,6 +86,18 @@ public final class Main {
     }
     if (args.length == 0) {
       new BrowserSession(docs, index, version, null).run();
+      return;
+    }
+    if (args[0].equals("-m") || args[0].equals("--method")) {
+      requireLength(args, 2);
+      List<SearchIndex.Member> matches = SearchIndex.namedMethods(docs.memberSearch(version), args[1]);
+      StringBuilder result = new StringBuilder("Methods named " + args[1] + " in Java "
+          + version + " (declaring classes):\n");
+      if (matches.isEmpty()) result.append("  No matches.\n");
+      for (SearchIndex.Member member : matches) {
+        result.append("  ").append(member.className()).append(" — ").append(member.l).append('\n');
+      }
+      present(result.toString());
       return;
     }
     String requested = args[0];
@@ -104,7 +115,14 @@ public final class Main {
         requested = prefix;
       }
     }
-    String name = resolve(index, requested);
+    String name;
+    try {
+      name = resolve(index, requested);
+    } catch (IllegalArgumentException ex) {
+      if (!ex.getMessage().startsWith("Class not found:")) throw ex;
+      throw new IllegalArgumentException(ex.getMessage()
+          + new Availability(docs).classReport(requested, version), ex);
+    }
     if (name == null) {
       return;
     }
@@ -135,8 +153,9 @@ public final class Main {
           .filter(m -> m.name.equals(requestedMethod))
           .map(m -> "\n  " + m.signature).collect(Collectors.joining());
       throw new IllegalArgumentException(
-          "No matching documented method on " + name + " in Java " + version + "."
-              + (alternatives.isEmpty() ? "" : " Available overloads:" + alternatives));
+          "No matching documented member on " + name + " in Java " + version + "."
+              + (alternatives.isEmpty() ? "" : " Available overloads:" + alternatives)
+              + new Availability(docs).memberReport(name, memberArgs, version));
     }
     StringBuilder out = new StringBuilder(
         name + " — Java " + version + " documentation\n" + doc.sourceUrl + "\n\n");
@@ -270,6 +289,25 @@ public final class Main {
         System.getProperty("java.specification.version"));
   }
 
+  private VersionChoice chooseVersion() throws IOException {
+    String saved = selection();
+    if (saved != null) return new VersionChoice(saved, "(selected)", null);
+    ProjectTarget target = ProjectTarget.detect(Path.of(System.getProperty("user.dir")));
+    if (target != null) {
+      String release = Versions.supportedFor(target.major);
+      String qualifier = target.apiRestricted ? ""
+          : "; bytecode/toolchain setting only—API availability may differ";
+      return new VersionChoice(release, "(project)", target.source + " targets Java "
+          + target.major + qualifier + "; using Java " + release + " documentation."
+          + " Override with --docVersion <release>.");
+    }
+    Versions.Selection detected = automaticSelection();
+    return new VersionChoice(detected.version, "(auto)", detected.notice()
+        + " Change with --docVersion <release>.");
+  }
+
+  private record VersionChoice(String version, String label, String notice) {}
+
   private void present(String text) throws IOException {
     if (System.console() != null && System.getenv("NO_COLOR") == null) {
       text = colorize(text);
@@ -325,6 +363,7 @@ public final class Main {
         Usage:
           jDoc --docVersion <release>     Select the default documentation release.
                                           Supported versions: 17, 21, 25
+          jDoc --docVersion <release> <Class> [member]  Use a release for one lookup
           jDoc --versions                 Show supported releases and cached status
           jDoc --version | -v             Show the application version
           jDoc --help                     Show this help
@@ -333,6 +372,7 @@ public final class Main {
           jDoc <Class> -<member>          Look up a method or member (inherited too)
           jDoc <Class> -p <count> [-i]    List methods by arity; -i includes inherited
           jDoc <Class> <method> -p <count|types>  Filter declared and inherited methods
+          jDoc -m <method>                Find documented classes declaring a method
 
         Browser: Packages → Classes → Members → Documentation.
           From home, type String to find a class across all packages.
@@ -351,8 +391,10 @@ public final class Main {
                   jDoc String valueOf -p 3
                   jDoc String valueOf -p char-array, int, int
 
-        Without a saved selection, JAVA_HOME (or the running Java) selects the
-        closest supported documentation release no newer than that Java version.
-        Pages and the class index are fetched on demand and cached locally.""");
+        Release precedence: explicit --docVersion, project build release, JAVA_HOME,
+        running Java. Literal Maven and Gradle settings are detected without
+        executing the build. Target/source compatibility alone does not restrict APIs.
+        Type/member indexes and class pages are fetched on demand and cached.
+        A missing API checks other cached releases; an uncached release is unknown.""");
   }
 }

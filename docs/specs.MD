@@ -12,12 +12,18 @@
 
 - Support documentation releases 17, 21, and 25.
 - `jDoc --docVersion 17` persistently selects the default documentation release.
-  Without a saved choice, use `JAVA_HOME` when valid or the running JVM otherwise;
-  select the closest supported release no newer than the detected Java version.
-  Report the automatic choice on stderr without saving it.
+  `jDoc --docVersion 21 <Class> [member]` overrides it for one lookup.
+  Without an explicit choice, read a local Maven or Gradle build setting from
+  the current directory or parent project: `--release` settings before JDK
+  toolchains, then weaker bytecode target/source settings. Do not execute build
+  scripts. Fall back to `JAVA_HOME`, then the running JVM. Select the closest
+  supported release no newer than the detected version; report its source and
+  distinguish bytecode compatibility from an enforced API release.
 - `jDoc --versions` lists supported releases, the current selection, and cache
   status. `jDoc --version` and `jDoc -v` show the application version.
-- Fetch a release's class index and individual requested class pages on demand.
+- Fetch the release's type and package search indexes instead of scraping the
+  all-classes HTML page. Fetch the larger member index for `-m` reverse lookup.
+  Fetch individual requested class pages on demand.
   Cache extracted signatures and documentation by release, not full archives.
   Cached class lookups work offline. Show the selected release and source URL.
 - Schema v4 stores class and member prose as paragraphs, code blocks, lists,
@@ -73,6 +79,13 @@
   a name. Non-interactive output gives suggestions without prompting.
 - Report methods absent in a selected release and list available overloads
   when an exact parameter lookup fails.
+- For failed class/member lookups, check only other cached releases. Where a
+  class page confirms an effective member, report the declaring type and
+  `@since` when known. A member-index hit without the class page can confirm
+  that a type documents it but cannot establish the declaring type. If the
+  cache cannot determine availability, say so rather than claiming absence.
+- `jDoc -m <name>` searches the selected release's member index for method
+  names and lists classes that document matching declarations.
 
 ## Terminal presentation
 

@@ -3,7 +3,6 @@ package dev.jdoc;
 import com.google.gson.Gson;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -15,8 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -45,7 +43,9 @@ final class Documentation {
   }
 
   boolean indexed(String version) {
-    return Files.exists(versionPath(version).resolve("index.json"));
+    return Files.exists(versionPath(version).resolve("type-search-index.json"))
+        && Files.exists(versionPath(version).resolve("package-search-index.json"))
+        || Files.exists(versionPath(version).resolve("index.json"));
   }
 
   long cachedCount(String version) throws IOException {
@@ -60,48 +60,82 @@ final class Documentation {
 
   Map<String, String> index(String version) throws IOException {
     Path path = versionPath(version).resolve("index.json");
-    if (Files.exists(path)) {
+    try {
+      List<SearchIndex.Type> types = cachedTypeSearch(version);
+      if (types == null) {
+        types = SearchIndex.types(fetchText(Versions.typeIndex(version)));
+        write(versionPath(version).resolve("type-search-index.json"), types);
+      }
+      List<SearchIndex.Package> packages = cachedPackageSearch(version);
+      if (packages == null) {
+        packages = SearchIndex.packages(fetchText(Versions.packageIndex(version)));
+        write(versionPath(version).resolve("package-search-index.json"), packages);
+      }
+      Map<String, String> result = SearchIndex.classUrls(version, types, packages);
+      if (result.isEmpty()) throw new IOException("No classes in Java " + version + " search index");
+      if (!Files.exists(path)) write(path, result);
+      return result;
+    } catch (IOException ex) {
+      if (!Files.exists(path)) throw ex;
       try (Reader in = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-        Map<String, String> index = gson.fromJson(in, Map.class);
-        if (index != null && !index.isEmpty()) {
-          return index;
-        }
+        Map<String, String> old = gson.fromJson(in, Map.class);
+        if (old != null && !old.isEmpty()) return old;
       }
+      throw ex;
     }
-    Document page = fetch(Versions.index(version));
-    Map<String, String> index = new LinkedHashMap<>();
-    for (Element link : page.select("a[href$=.html]")) {
-      String href = link.attr("href");
-      if (href.contains("#") || href.contains("?") || href.startsWith("http")) {
-        continue;
-      }
-      String relative = href.replaceFirst("^\\./", "");
-      String[] parts = relative.split("/");
-      if (parts.length < 2) {
-        continue;
-      }
-      int offset = 1;
-      if (parts.length < offset + 2) {
-        continue;
-      }
-      String file = parts[parts.length - 1];
-      String simple = file.substring(0, file.length() - 5);
-      if (simple.contains("-") || simple.equals("package-summary") || simple.equals(
-          "module-summary")) {
-        continue;
-      }
-      List<String> names = new ArrayList<>();
-      for (int i = offset; i < parts.length - 1; i++) {
-        names.add(parts[i]);
-      }
-      names.add(simple);
-      index.put(String.join(".", names), Versions.base(version) + relative);
+  }
+
+  List<SearchIndex.Type> cachedTypeSearch(String version) throws IOException {
+    Path path = versionPath(version).resolve("type-search-index.json");
+    if (!Files.exists(path)) return null;
+    try (Reader in = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+      return Arrays.asList(gson.fromJson(in, SearchIndex.Type[].class));
     }
-    if (index.isEmpty()) {
-      throw new IOException("No classes found in the Java " + version + " index");
+  }
+
+  List<SearchIndex.Package> cachedPackageSearch(String version) throws IOException {
+    Path path = versionPath(version).resolve("package-search-index.json");
+    if (!Files.exists(path)) return null;
+    try (Reader in = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+      return Arrays.asList(gson.fromJson(in, SearchIndex.Package[].class));
     }
-    write(path, index);
-    return index;
+  }
+
+  List<SearchIndex.Member> cachedMemberSearch(String version) throws IOException {
+    Path path = versionPath(version).resolve("member-search-index.json");
+    if (!Files.exists(path)) return null;
+    try (Reader in = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+      return Arrays.asList(gson.fromJson(in, SearchIndex.Member[].class));
+    }
+  }
+
+  List<SearchIndex.Member> memberSearch(String version) throws IOException {
+    List<SearchIndex.Member> cached = cachedMemberSearch(version);
+    if (cached != null) return cached;
+    List<SearchIndex.Member> members = SearchIndex.members(fetchText(Versions.memberIndex(version)));
+    write(versionPath(version).resolve("member-search-index.json"), members);
+    return members;
+  }
+
+  Map<String, String> cachedIndex(String version) throws IOException {
+    List<SearchIndex.Type> types = cachedTypeSearch(version);
+    List<SearchIndex.Package> packages = cachedPackageSearch(version);
+    if (types != null && packages != null) return SearchIndex.classUrls(version, types, packages);
+    Path path = versionPath(version).resolve("index.json");
+    if (!Files.exists(path)) return null;
+    try (Reader in = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+      return gson.fromJson(in, Map.class);
+    }
+  }
+
+  DocModel cachedClassDoc(String version, String name) throws IOException {
+    Path path = versionPath(version).resolve("classes").resolve(name + ".json");
+    if (!Files.exists(path)) return null;
+    try (Reader in = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+      DocModel doc = gson.fromJson(in, DocModel.class);
+      if (doc != null) doc.stale = doc.schemaVersion != 4;
+      return doc;
+    }
   }
 
   DocModel classDoc(String version, String name, String url) throws IOException {
@@ -170,10 +204,7 @@ final class Documentation {
   }
 
   private Document fetch(String url) throws IOException {
-    HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-    connection.setRequestProperty("User-Agent", "jDoc/0.1 (terminal Javadoc reader)");
-    connection.setConnectTimeout(12000);
-    connection.setReadTimeout(20000);
+    HttpURLConnection connection = connection(url);
     try {
       int status = connection.getResponseCode();
       if (status != 200) {
@@ -185,6 +216,27 @@ final class Documentation {
     } finally {
       connection.disconnect();
     }
+  }
+
+  private String fetchText(String url) throws IOException {
+    HttpURLConnection connection = connection(url);
+    try {
+      int status = connection.getResponseCode();
+      if (status != 200) throw new IOException("HTTP " + status + " at " + url);
+      try (java.io.InputStream stream = connection.getInputStream()) {
+        return new String(stream.readAllBytes(), StandardCharsets.UTF_8);
+      }
+    } finally {
+      connection.disconnect();
+    }
+  }
+
+  private HttpURLConnection connection(String url) throws IOException {
+    HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+    connection.setRequestProperty("User-Agent", "jDoc/0.1 (terminal Javadoc reader)");
+    connection.setConnectTimeout(12000);
+    connection.setReadTimeout(20000);
+    return connection;
   }
 
   private void write(Path path, Object object) throws IOException {

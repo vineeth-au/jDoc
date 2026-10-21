@@ -61,4 +61,19 @@ class DocumentationTest {
     assertEquals("first();\n  second();", loaded.methods.get(0).body.get(0).code);
     assertTrue(!loaded.stale);
   }
+
+  @Test
+  void classIndexComesFromCachedTypeAndPackageSearchIndexes() throws IOException {
+    Path folder = cache.resolve("17");
+    Files.createDirectories(folder);
+    Files.writeString(folder.resolve("type-search-index.json"),
+        "[{\"p\":\"java.util\",\"l\":\"Map.Entry\"}]");
+    Files.writeString(folder.resolve("package-search-index.json"),
+        "[{\"m\":\"java.base\",\"l\":\"java.util\"}]");
+    Documentation docs = new Documentation(cache);
+    assertEquals(Versions.base("17") + "java.base/java/util/Map.Entry.html",
+        docs.index("17").get("java.util.Map.Entry"));
+    assertTrue(Files.exists(folder.resolve("index.json")));
+    assertTrue(docs.cachedMemberSearch("17") == null);
+  }
 }
