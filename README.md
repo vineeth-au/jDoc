@@ -4,7 +4,7 @@ jDoc is a macOS command-line (TUI) browser for viewing Java API documentation. L
 
 ## Requirements
 
-- Java 17 or newer
+- Java 17 or newer (the documentation release can differ from your installed Java)
 - Maven to build from source
 - Network access for the first lookup of a release or class
 
@@ -14,11 +14,17 @@ From the repository directory:
 
 ```sh
 mvn package
-./jDoc --docVersion 17
 ./jDoc String
 ```
 
 The first lookup downloads a class index and documentation page. Subsequent lookups of cached classes work offline.
+
+**Supported documentation releases:** Java 17, 21, and 25. Without a saved
+selection, jDoc detects the version in `JAVA_HOME` (or the running Java if
+`JAVA_HOME` is unavailable or unusable). It picks the closest supported release
+no newer than that version; for example, Java 22 selects Java 21 documentation.
+The automatic choice is reported on stderr and is not saved. Use
+`./jDoc --docVersion 21` to select a different release persistently.
 
 ## Examples
 

@@ -1,0 +1,15 @@
+# Javadoc emits stylesheets, indexes and helper pages; only the five class pages
+# below are checked in as characterization fixtures.
+/*
+!/.gitignore
+!/*/
+/*/*
+!/*/fixture/
+/*/fixture/*
+!/*/fixture/api/
+/*/fixture/api/*
+!/*/fixture/api/Text.html
+!/*/fixture/api/Sequence.html
+!/*/fixture/api/Failure.html
+!/*/fixture/api/Unit.html
+!/*/fixture/api/Dictionary.html

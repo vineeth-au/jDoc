@@ -72,7 +72,7 @@ final class Documentation {
       if (parts.length < 2) {
         continue;
       }
-      int offset = version.equals("8") ? 0 : 1;
+      int offset = 1;
       if (parts.length < offset + 2) {
         continue;
       }
