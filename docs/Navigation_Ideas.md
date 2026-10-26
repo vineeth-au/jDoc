@@ -1,14 +1,21 @@
 # jDoc: Richer TUI Navigation Ideas
 
+Ideas 4, 5, 6, and 8 are implemented in P6. The others remain proposals.
+
 Concrete navigation features for jDoc's interactive browser, each shown as what the user does and what they see, plus how it fits the current `MethodBrowser`.
 
 ## Design note: separate commands from search
 
-In the list view, typing already filters, and `q` only quits when not searching. New single-letter commands (`o`, `y`, `v`, …) would collide with typing a filter.
+Search starts active on launch and when entering a package. Inside a package,
+typing a class name can restart search after Escape; `/` is available when the
+first character is a command key. In other views, `/` starts search after
+Escape. `q` quits from command mode.
 
-The cleanest fix is the less/vim convention: plain keys are commands, `/` enters search mode, and `Esc` or `Enter` leaves it. `MethodBrowser` already has a `searching` flag, so this mostly means making `/` the way into search instead of "any printable key".
+Current lowercase controls: `d` opens, `c` collapses, `h` returns home,
+`b` opens bookmarks, and `p` manages hidden packages. Detail actions use
+`o`, `y`, `m`, and `s`.
 
-## 1. Fuzzy class picker (`jDoc` with no args)
+## 1. Fuzzy class picker (`jdoc` with no args)
 
 ```text
 Find class: hshmp_                                   Java 21
@@ -37,21 +44,25 @@ public void putAll([Map]<? extends K, ? extends V> m)
 Copies all of the mappings from the specified map …
 See also: [Map.putAll]
 ──────────────────────────────────────────────────────────────
-Tab Next link  Enter Follow  b Back  q Quit
+Tab Next link  Enter Follow  c Back  q Quit
 ```
 
 - A breadcrumb grows as you go: `HashMap › putAll › Map › entrySet`.
-- `b` pops one level.
+- `c` pops one level; `b` is reserved for bookmarks.
 - Implement as a `Deque<View>`, where each view stores the class, selected method, and scroll offset, so going back restores the exact position.
 
-**Code change needed:** `JavadocParser` currently flattens everything with `.text()`. Keep the `<a href>` targets, for example as a `List<Link>` on `DocModel.Method` holding the label, target class, and anchor. Bump `schemaVersion` to 3 so old caches refetch.
+P3 already stores typed links (target class and anchor) in schema v5. Following
+links and maintaining a view-history stack remain proposals.
 
 ## 3. Move between methods without going back
 
-- `n` / `p`: jump to the next or previous method in summary order, instead of `b`, arrow down, `Enter`.
+- Proposed next/previous-method shortcuts need new keys: `p` now manages hidden packages.
 - `]` / `[`: jump between overloads of the same name, for example the nine `String.valueOf` variants.
 
 ## 4. Grouped overloads in the list
+
+**Implemented.** Filtering occurs before grouping. Right Arrow expands a
+group, and Left Arrow collapses it before navigating to the parent level.
 
 ```text
 ❯ ▸ valueOf             (9 overloads)  Returns the string representation…
@@ -66,13 +77,20 @@ Tab Next link  Enter Follow  b Back  q Quit
 
 ## 5. Member-kind tabs
 
+**Implemented.** The five tabs are Methods, Constructors, Fields, Enum
+Constants, and Nested Types. Tab or `1`–`5` switches outside search mode.
+
 ```text
  Methods (54) │ Constructors (15) │ Fields (2) │ Nested (0)
 ```
 
-Switch with `1`–`4`, or `Tab` in the list view. This replaces the current rule that shows constructors only when a class has no methods, and gives fields a home once they are parsed.
+Switch with `1`–`5`, or `Tab` in the list view. Enum Constants have their own
+fifth tab; constructors, fields, and nested types were already parsed in P2.
 
 ## 6. Filter operators in search
+
+**Implemented.** Operators compose with text; invalid operators show an error.
+The return-type filter uses parsed type data in cache schema v5.
 
 | Typed | Meaning |
 | --- | --- |
@@ -91,23 +109,26 @@ Press `v` on any method to get a release picker:
 
 ```text
 String.strip()  — choose release
-  8   ✗ not present
-  11  ✓ added (@since 11)
   17  ✓
-❯ 21  ✓ (current)
+  ❯ 21  ✓ (current)
+  25  ✓
 ```
 
 - Choosing a release re-renders the same method from that release's cache.
-- `d` shows a diff against another release, for example a changed signature or new `@throws`.
+- A diff shortcut needs a different key: `d` now opens the selected description.
 - This is jDoc's differentiator; no IDE does it.
 
 ## 8. Quick actions
+
+**Implemented.** Detail actions use `o`, `y`, `m`, and `s`. `r` opens
+recent classes and `b` opens bookmarks after leaving search mode. Recents are
+capped at 20 and both lists are stored in the user cache.
 
 | Key | Action | macOS implementation |
 | --- | --- | --- |
 | `o` | Open this member's anchor in the browser | `new ProcessBuilder("open", url + "#" + anchor)` |
 | `y` | Copy the signature | Pipe to `pbcopy` |
-| `Y` | Copy the import line (`import java.util.HashMap;`) | Pipe to `pbcopy` |
+| `m` | Copy the import line (`import java.util.HashMap;`) | Pipe to `pbcopy` |
 | `s` | Star or bookmark the class | Small `bookmarks.json` in the cache dir |
 | `r` | Recently viewed classes | Same idea, capped at 20 entries |
 

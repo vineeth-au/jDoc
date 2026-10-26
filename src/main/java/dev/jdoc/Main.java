@@ -36,7 +36,7 @@ public final class Main {
     }
     if (args.length == 0 && System.console() == null) {
       System.out.println("An interactive terminal is required to browse packages. "
-          + "Use jDoc <Class> or jDoc --help.");
+          + "Use jdoc <Class> or jdoc --help.");
       return;
     }
     if (args.length > 0 && (args[0].equals("--version") || args[0].equals("-v"))) {
@@ -401,7 +401,7 @@ public final class Main {
 
   private static void requireLength(String[] args, int expected) {
     if (args.length != expected) {
-      throw new IllegalArgumentException("Unexpected arguments. See jDoc --help.");
+      throw new IllegalArgumentException("Unexpected arguments. See jdoc --help.");
     }
   }
 
@@ -409,24 +409,25 @@ public final class Main {
     System.out.println("""
         jDoc — terminal Java API documentation
         Usage:
-          jDoc --docVersion <release>     Select the default documentation release.
+          jdoc --docVersion <release>     Select the default documentation release.
                                           Supported versions: 17, 21, 25
-          jDoc --docVersion <release> <Class> [member]  Use a release for one lookup
-          jDoc --versions                 Show supported releases and cached status
-          jDoc --version | -v             Show the application version
-          jDoc --help                     Show this help
-          jDoc                            Search packages or classes (terminal only)
-          jDoc <Class>                    Browse methods, constructors, fields and types
-          jDoc <Class> -<member>          Look up a method or member (inherited too)
-          jDoc <Class> -p <count> [-i]    List methods by arity; -i includes inherited
-          jDoc <Class> <method> -p <count|types>  Filter declared and inherited methods
-          jDoc -m <method>                Find documented classes declaring a method
-          jDoc --diff <old> <new> <Class> Compare effective class APIs across releases
-          jDoc --new <release>            APIs introduced in a documentation release
-          jDoc --removal <release>        APIs flagged for removal as of a release
+          jdoc --docVersion <release> <Class> [member]  Use a release for one lookup
+          jdoc --versions                 Show supported releases and cached status
+          jdoc --version | -v             Show the application version
+          jdoc --help                     Show this help
+          jdoc                            Search packages or classes (terminal only)
+          jdoc <Class>                    Browse methods, constructors, fields and types
+          jdoc <Class> -<member>          Look up a method or member (inherited too)
+          jdoc <Class> -p <count> [-i]    List methods by arity; -i includes inherited
+          jdoc <Class> <method> -p <count|types>  Filter declared and inherited methods
+          jdoc -m <method>                Find documented classes declaring a method
+          jdoc --diff <old> <new> <Class> Compare effective class APIs across releases
+          jdoc --new <release>            APIs introduced in a documentation release
+          jdoc --removal <release>        APIs flagged for removal as of a release
 
         Browser: Packages → Classes → Members → Documentation.
           Home starts with two-segment package groups such as java.awt.
+          Tab at home toggles java.* only / all packages for this session.
           Search begins active on launch; Esc clears the query and exits search.
           Opening a package starts search there, even after Esc at its parent.
           From java, type List to find classes in descendant packages. Esc
@@ -434,21 +435,21 @@ public final class Main {
           Use / to search when the first letter is a command shortcut.
           d/Enter/→ opens a group, class, description, or method.
           c/← collapses one level; h Home; b Bookmarks; q Quit; p Hidden packages.
-          In members, Tab/1–5 changes kind; d/→ expands overloads, c/← collapses.
+          In members, Tab/1–5 changes kind outside search; d/→ expands overloads, c/← collapses.
           Filters combine: /:static #2, /:since 21, /:deprecated, /->String.
           i toggles inherited methods on the Methods tab.
-          Class description is the first Methods row; d/Enter/→ reads it.
+          Class description is the first unfiltered Methods row; d/Enter/→ reads it.
           In detail: o opens source, y copies signature, m copies import,
-          s bookmarks the class. r opens recent classes.
+          s bookmarks the class. In package command mode, r opens recent classes.
 
         Colors are disabled by NO_COLOR or when output is redirected.
         A number after -p/--params is a parameter COUNT, not an overload number.
 
         Types require a method name. Use char-array for char[]. Put -p last.
-        Examples: jDoc String -repeat
-                  jDoc String -p 1
-                  jDoc String valueOf -p 3
-                  jDoc String valueOf -p char-array, int, int
+        Examples: jdoc String -repeat
+                  jdoc String -p 1
+                  jdoc String valueOf -p 3
+                  jdoc String valueOf -p char-array, int, int
 
         Release precedence: explicit --docVersion, project build release, JAVA_HOME,
         running Java. Literal Maven and Gradle settings are detected without
