@@ -58,7 +58,7 @@ class JavadocParserTest {
                 + "<div class='member-signature'>public Exception()</div>"
                 + "<div class='block'>Without a message.</div></section></section>";
         DocModel doc = JavadocParser.parse(Jsoup.parse(html), "java.lang.Exception", "url", "17");
-        assertEquals(4, doc.schemaVersion);
+        assertEquals(5, doc.schemaVersion);
         assertTrue(doc.methods.isEmpty());
         assertEquals("A checked exception.", doc.description);
         assertEquals(2, doc.constructors.size());

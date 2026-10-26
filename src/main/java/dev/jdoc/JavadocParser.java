@@ -20,7 +20,7 @@ final class JavadocParser {
 
   static DocModel parse(Document page, String name, String url, String release) {
     DocModel doc = new DocModel();
-    doc.schemaVersion = 4;
+    doc.schemaVersion = 5;
     doc.name = name;
     doc.sourceUrl = url;
     doc.release = release;
@@ -56,6 +56,8 @@ final class JavadocParser {
       DocModel.Method method = new Method();
       method.name = methodName;
       method.signature = declaration;
+      Element returnType = signature.selectFirst("span.return-type");
+      method.returnType = returnType == null ? null : returnType.text().trim();
       method.anchor = anchor;
       method.declaringType = name;
       method.sourceUrl = url;

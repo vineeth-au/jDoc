@@ -35,7 +35,7 @@ class JavadocFixtureTest {
   void textOverloadsAndVarargsFollowTheGeneratedSummary(String release) throws IOException {
     Document page = fixture(release, "Text");
     DocModel doc = model(release, "Text", page);
-    assertEquals(4, doc.schemaVersion);
+    assertEquals(5, doc.schemaVersion);
     assertEquals("fixture.api.Text", doc.name);
     assertEquals(List.of("format", "valueOf", "valueOf"),
         doc.methods.stream().map(m -> m.name).toList());
@@ -43,6 +43,7 @@ class JavadocFixtureTest {
         doc.methods.stream().filter(m -> m.name.equals("valueOf")).map(m -> m.anchor).toList());
     assertEquals(List.of("char[]", "int", "int"), doc.methods.get(2).parameterTypes);
     assertEquals(List.of("String", "Object[]"), doc.methods.get(0).parameterTypes);
+    assertEquals("Text", doc.methods.get(0).returnType);
     assertEquals(2, doc.constructors.size());
     assertEquals(List.of("MAX_VALUE"), doc.fields.stream().map(m -> m.name).toList());
     assertTrue(doc.methods.get(2).details.contains("Returns:\n  a new text value"));

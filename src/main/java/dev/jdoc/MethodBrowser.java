@@ -31,11 +31,13 @@ final class MethodBrowser {
 
   private final DocModel doc;
   private final Documentation docs;
+  private final BrowserActions actions;
   private final boolean colors;
-  private State state;
-  private boolean showInherited;
+  private final MemberCatalog catalog;
   private DocModel.Method opened;
+  private DocModel.Method selectedRef;
   private String unavailable;
+  private String actionStatus;
   private int detailScroll;
   private boolean detail;
   private boolean searching;
@@ -45,28 +47,48 @@ final class MethodBrowser {
   }
 
   MethodBrowser(DocModel doc, Documentation docs) {
-    this.doc = doc;
-    this.docs = docs;
-    this.colors = System.getenv("NO_COLOR") == null;
-    this.state = new State(doc.declaredMembers());
+    this(doc, docs, new BrowserActions(new NavigationStore(docs.versionPath(""))));
   }
 
-  enum Navigation { STAY, BACK, HOME, QUIT }
+  MethodBrowser(DocModel doc, Documentation docs, BrowserActions actions) {
+    this.doc = doc;
+    this.docs = docs;
+    this.actions = actions;
+    this.colors = System.getenv("NO_COLOR") == null;
+    this.catalog = new MemberCatalog(doc);
+  }
+
+  enum Navigation { STAY, BACK, HOME, BOOKMARKS, QUIT }
+
+  String className() { return doc.name; }
+  void beginSearch() { searching = true; }
 
   Navigation handleKey(int key, int height) {
     if (key == 27) {
       if (!detail && searching) {
         searching = false;
-        return Navigation.STAY;
+        catalog.filter("");
       }
-      return Navigation.HOME;
+      return Navigation.STAY;
     }
-    if (key == 'q' && (detail || !searching)) {
-      return Navigation.QUIT;
-    }
+    if (key == 'q' && (detail || !searching)) return Navigation.QUIT;
+    if (key == 'h' && (detail || !searching)) return Navigation.HOME;
+    if (key == 'b' && (detail || !searching)) return Navigation.BOOKMARKS;
     if (detail) {
-      if (key == 1004 || key == 'b') {
+      if (key == 1004 || key == 'c') {
         detail = false;
+        actionStatus = null;
+      } else if (key == 'o' || key == 'y' || key == 'm' || key == 's') {
+        try {
+          actionStatus = switch (key) {
+            case 'o' -> actions.open(doc, opened);
+            case 'y' -> actions.copySignature(doc, opened);
+            case 'm' -> actions.copyImport(doc, opened);
+            default -> actions.toggleBookmark(doc);
+          };
+        } catch (IOException ex) {
+          actionStatus = "Action failed: " + ex.getMessage();
+        }
       } else {
         int page = Math.max(1, height - 5);
         if (key == 1000) detailScroll = Math.max(0, detailScroll - 1);
@@ -76,47 +98,54 @@ final class MethodBrowser {
       }
       return Navigation.STAY;
     }
-    if (key == 1004 || key == 'b' && !searching) {
+    MemberCatalog.View view = catalog.view();
+    if (key == 1004 || key == 'c' && !searching) {
+      MemberCatalog.Row selected = view.selected();
+      if (selected != null && selected.groupKey != null
+          && (!selected.group || selected.expanded)) {
+        catalog.collapse(selected);
+        return Navigation.STAY;
+      }
       return Navigation.BACK;
     }
-    if (key == 'i' && !searching && state.query.isEmpty()) {
-      showInherited = !showInherited;
-      List<DocModel.Method> visible = doc.declaredMembers();
-      if (showInherited) visible.addAll(doc.inherited);
-      state = new State(visible);
+    if (key == 'i' && !searching && catalog.tab() == MemberCatalog.Tab.METHODS) {
+      catalog.toggleInherited();
+    } else if (key == 9 && !searching) {
+      catalog.nextTab();
+    } else if (key >= '1' && key <= '5' && !searching) {
+      catalog.selectTab(key - '1');
     } else if (key == '/') {
       searching = true;
-    } else if (key == 'C') {
-      opened = null;
-      detail = true;
-      detailScroll = 0;
-      searching = false;
     } else if (key == 1000) {
-      state.move(-1);
+      view.move(-1);
     } else if (key == 1001) {
-      state.move(1);
+      view.move(1);
     } else if (key == 1002) {
-      state.move(-Math.max(1, height - 5));
+      view.move(-Math.max(1, height - 6));
     } else if (key == 1003) {
-      state.move(Math.max(1, height - 5));
-    } else if (key == 1005 || key == 10 || key == 13) {
-      if (state.selected() != null) {
+      view.move(Math.max(1, height - 6));
+    } else if (key == 'd' && !searching || key == 1005 || key == 10 || key == 13) {
+      MemberCatalog.Row selected = view.selected();
+      if (selected != null && selected.group) {
+        catalog.expand(selected);
+      } else if (selected != null) {
         unavailable = null;
-        opened = state.selected();
-        try {
-          opened = docs.detail(doc.release, opened);
-        } catch (IOException ex) {
-          unavailable = "Details unavailable (not cached or offline): " + ex.getMessage();
+        selectedRef = selected.member;
+        opened = selectedRef;
+        if (opened != null) {
+          try {
+            opened = docs.detail(doc.release, opened);
+          } catch (IOException ex) {
+            unavailable = "Details unavailable (not cached or offline): " + ex.getMessage();
+          }
         }
         detail = true;
         detailScroll = 0;
-        searching = false;
       }
     } else if (key == 8 || key == 127) {
-      if (!state.query.isEmpty()) state.filter(state.query.substring(0, state.query.length() - 1));
-    } else if (key >= 32 && key != 127 && !Character.isISOControl(key)) {
-      state.filter(state.query + new String(Character.toChars(key)));
-      searching = true;
+      if (searching && !view.query.isEmpty()) catalog.filter(view.query.substring(0, view.query.length() - 1));
+    } else if (searching && key >= 32 && key != 127 && !Character.isISOControl(key)) {
+      catalog.filter(view.query + new String(Character.toChars(key)));
     }
     return Navigation.STAY;
   }
@@ -128,7 +157,7 @@ final class MethodBrowser {
     List<String> classLines = doc.methods.isEmpty() ? DocRenderer.classLines(doc, width - 1)
         : List.of();
     int overviewRows = detail ? 0 : Math.min(3, classLines.size());
-    int viewport = height - 5 - overviewRows;
+    int viewport = height - (detail ? 5 : 6 + overviewRows);
     out.print("\033[H\033[2J");
     line(out, terminal, doc.name + "  ·  Java " + doc.release + " API"
         + (doc.stale ? "  ·  older cache; reconnect to refresh" : ""), CYAN, width);
@@ -136,7 +165,8 @@ final class MethodBrowser {
       List<String> lines = detailLines(opened, width);
       detailScroll = Math.max(0, Math.min(detailScroll, Math.max(0, lines.size() - viewport)));
       line(out, terminal, opened == null ? "Class documentation"
-          : opened.kind + " " + (state.cursor + 1) + "/" + state.matches.size(), YELLOW, width);
+          : opened.kind + " " + (catalog.view().cursor + 1) + "/"
+              + catalog.view().rows.size(), YELLOW, width);
       rule(out, terminal, width);
       for (int i = 0; i < viewport; i++) {
         int index = detailScroll + i;
@@ -150,47 +180,59 @@ final class MethodBrowser {
         line(out, terminal, value, style, width);
       }
       rule(out, terminal, width);
-      line(out, terminal, "↑↓ Scroll  PgUp/PgDn Page  ← Back  Esc Home  q Quit", MUTED, width);
+      line(out, terminal, actionStatus == null
+          ? "o Open  y Signature  m Import  s Bookmark  c Back  h Home  q Quit"
+          : actionStatus + "  ·  c Back  h Home  q Quit", MUTED, width);
     } else {
       for (int i = 0; i < overviewRows; i++) {
         line(out, terminal, i == overviewRows - 1 && classLines.size() > overviewRows
-            ? "…  (press C for full class documentation)" : classLines.get(i), MUTED, width);
+            ? "…  (select Class description for the full text)" : classLines.get(i), MUTED, width);
       }
+      StringBuilder tabs = new StringBuilder();
+      String[] names = {"Methods", "Ctors", "Fields", "Enums", "Nested"};
+      for (int i = 0; i < names.length; i++) {
+        if (i > 0) tabs.append("  ");
+        tabs.append(catalog.tab().ordinal() == i ? "*" : " ").append(i + 1).append(' ')
+            .append(names[i]).append(' ').append(catalog.count(MemberCatalog.Tab.values()[i]));
+      }
+      line(out, terminal, tabs.toString(), CYAN, width);
+      MemberCatalog.View view = catalog.view();
       line(out, terminal,
-          "Search members: " + state.query
-              + (searching ? "_" : "  (type / to search)"), YELLOW, width);
+          "Search members: " + view.query
+              + (searching ? "_" : "  (/ to search)"), YELLOW, width);
       rule(out, terminal, width);
-      state.keepVisible(viewport);
+      view.keepVisible(viewport);
       int signatureWidth = Math.max(16, width / 2);
       for (int i = 0; i < viewport; i++) {
-        int index = state.top + i;
-        if (index >= state.matches.size()) {
+        int index = view.top + i;
+        if (index >= view.rows.size()) {
           out.print("\033[K\n");
           continue;
         }
-        DocModel.Method method = state.matches.get(index);
-        boolean groupStart = method.inherited && (index == 0
-            || !state.matches.get(index - 1).inherited
-            || !method.declaringType.equals(state.matches.get(index - 1).declaringType));
-        String label = groupStart ? "[Inherited from "
-            + method.declaringType.substring(method.declaringType.lastIndexOf('.') + 1) + "] "
-            : "[" + method.kind + "] ";
-        String signature = shorten(label + listSignature(method),
+        MemberCatalog.Row selected = view.rows.get(index);
+        DocModel.Method method = selected.member;
+        String label = selected.description() ? "Class description"
+            : selected.group ? (selected.expanded ? "▾ " : "▸ ")
+            + selected.name() + " (" + selected.count + " overloads)"
+            : (selected.groupKey != null ? "  " : "") + "[" + method.kind + "] "
+                + listSignature(method);
+        String signature = shorten(label,
             signatureWidth - 3);
-        String summary = method.inherited ? "Inherited from " + method.declaringType
-            : method.description;
-        String labels = DocRenderer.summaryLabels(method);
+        String summary = selected.description() ? doc.description : method.inherited
+            ? "Inherited from " + method.declaringType : method.description;
+        String labels = selected.description() ? "" : DocRenderer.summaryLabels(method);
         if (!labels.isEmpty()) summary = labels + (summary == null || summary.isEmpty() ? "" : "  " + summary);
         String description = shorten(summary, Math.max(0, width - signatureWidth - 4));
         String row = String.format("%-" + signatureWidth + "s  %s", signature, description);
-        lineHighlighted(out, terminal, (index == state.cursor ? "❯ " : "  ") + row,
-            index == state.cursor ? SELECTED : GREEN, width, state.query);
+        lineHighlighted(out, terminal, (index == view.cursor ? "❯ " : "  ") + row,
+            index == view.cursor ? SELECTED : GREEN, width, view.query);
       }
       rule(out, terminal, width);
       line(out, terminal,
-          "i Inherited (" + doc.inherited.size() + (showInherited ? " shown" : " collapsed")
-              + ")  ·  " + (state.matches.isEmpty() ? 0 : state.cursor + 1)
-              + "/" + state.matches.size() + "  C Class  ← Classes  → Read  Esc Search/Home  q Quit",
+          view.error != null ? view.error : "i Inherited (" + catalog.inheritedCount()
+              + (catalog.inherited() ? " shown" : " collapsed") + ")  ·  "
+              + (view.rows.isEmpty() ? 0 : view.cursor + 1) + "/" + view.rows.size()
+              + "  Tab Kinds  d/→ Open  c/← Collapse  h Home  q Quit",
           MUTED, width);
     }
     out.flush();
@@ -204,8 +246,8 @@ final class MethodBrowser {
       return lines;
     }
     List<String> lines = DocRenderer.methodLines(method, width - 2, doc.sourceUrl);
-    if (state.selected() != null && state.selected().inherited) {
-      lines.add(1, "Inherited from " + state.selected().declaringType);
+    if (selectedRef != null && selectedRef.inherited) {
+      lines.add(1, "Inherited from " + selectedRef.declaringType);
     }
     if (unavailable != null) {
       lines.add("");
@@ -319,49 +361,4 @@ final class MethodBrowser {
     };
   }
 
-  static final class State {
-
-    final List<DocModel.Method> all;
-    List<DocModel.Method> matches;
-    String query = "";
-    int cursor;
-    int top;
-
-    State(List<DocModel.Method> methods) {
-      all = methods;
-      matches = new ArrayList<>(methods);
-    }
-
-    void filter(String value) {
-      query = value;
-      String needle = value.toLowerCase(Locale.ROOT);
-      matches = new ArrayList<>();
-      for (DocModel.Method method : all) {
-        if (method.signature.toLowerCase(Locale.ROOT).contains(needle)) {
-          matches.add(method);
-        }
-      }
-      cursor = 0;
-      top = 0;
-    }
-
-    DocModel.Method selected() {
-      return matches.isEmpty() ? null : matches.get(cursor);
-    }
-
-    void move(int delta) {
-      if (!matches.isEmpty()) {
-        cursor = Math.max(0, Math.min(matches.size() - 1, cursor + delta));
-      }
-    }
-
-    void keepVisible(int page) {
-      if (cursor < top) {
-        top = cursor;
-      }
-      if (cursor >= top + page) {
-        top = cursor - page + 1;
-      }
-    }
-  }
 }

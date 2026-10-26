@@ -36,7 +36,8 @@ class JavadocLiveTest {
       if (name.equals("java.lang.String")) {
         assertTrue(doc.methods.stream().anyMatch(m -> m.name.equals("valueOf")), url);
         assertTrue(doc.methods.stream().anyMatch(m -> m.name.equals("repeat")
-            && "11".equals(m.since) && !m.body.isEmpty()), url);
+            && "11".equals(m.since) && !m.body.isEmpty()
+            && "String".equals(m.returnType)), url);
       } else if (name.equals("java.util.ArrayList")) {
         assertTrue(doc.methods.stream().anyMatch(m -> m.name.equals("add")), url);
         assertTrue(doc.inherited.stream().anyMatch(m -> m.name.equals("stream")
