@@ -150,7 +150,7 @@ final class Documentation {
     if (!Files.exists(path)) return null;
     try (Reader in = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
       DocModel doc = gson.fromJson(in, DocModel.class);
-      if (doc != null) doc.stale = doc.schemaVersion != 4;
+      if (doc != null) doc.stale = doc.schemaVersion != 5;
       return doc;
     }
   }
@@ -161,12 +161,13 @@ final class Documentation {
     if (Files.exists(path)) {
       try (Reader in = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
         DocModel doc = gson.fromJson(in, DocModel.class);
-        if (doc != null && doc.schemaVersion == 4 && doc.methods != null
+        if (doc != null && doc.schemaVersion == 5 && doc.methods != null
             && doc.constructors != null && doc.inherited != null && doc.fields != null
             && doc.classBody != null) {
           return doc;
         }
-        if (doc != null && (doc.schemaVersion == 2 || doc.schemaVersion == 3)
+        if (doc != null && (doc.schemaVersion == 2 || doc.schemaVersion == 3
+            || doc.schemaVersion == 4)
             && doc.methods != null && doc.constructors != null) {
           older = doc;
         }

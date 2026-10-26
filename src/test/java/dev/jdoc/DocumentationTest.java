@@ -38,15 +38,29 @@ class DocumentationTest {
   }
 
   @Test
+  void previousStructuredCacheCanStillBeReadOffline() throws IOException {
+    Path path = cache.resolve("17/classes/demo.Child.json");
+    Files.createDirectories(path.getParent());
+    Files.writeString(path, "{\"schemaVersion\":4,\"name\":\"demo.Child\","
+        + "\"methods\":[],\"constructors\":[],\"inherited\":[],\"fields\":[],"
+        + "\"classBody\":[]}");
+    DocModel doc = new Documentation(cache).classDoc("17", "demo.Child",
+        "http://127.0.0.1:1/Child.html");
+    assertTrue(doc.stale);
+    assertEquals(4, doc.schemaVersion);
+  }
+
+  @Test
   void structuredPageIsReadFromCacheWithoutNetwork() throws IOException {
     Path path = cache.resolve("17/classes/demo.Child.json");
     Files.createDirectories(path.getParent());
     DocModel fresh = new DocModel();
-    fresh.schemaVersion = 4;
+    fresh.schemaVersion = 5;
     fresh.name = "demo.Child";
     DocModel.Method method = new DocModel.Method();
     method.name = "sample";
     method.signature = "void sample()";
+    method.returnType = "void";
     method.since = "17";
     DocModel.Block block = new DocModel.Block();
     block.kind = "code";
@@ -58,6 +72,7 @@ class DocumentationTest {
     DocModel loaded = new Documentation(cache).classDoc("17", "demo.Child",
         "http://127.0.0.1:1/Child.html");
     assertEquals("17", loaded.methods.get(0).since);
+    assertEquals("void", loaded.methods.get(0).returnType);
     assertEquals("first();\n  second();", loaded.methods.get(0).body.get(0).code);
     assertTrue(!loaded.stale);
   }

@@ -426,12 +426,20 @@ public final class Main {
           jDoc --removal <release>        APIs flagged for removal as of a release
 
         Browser: Packages → Classes → Members → Documentation.
-          From home, type String to find a class across all packages.
-          Type to filter (/ starts search); Backspace edits the query.
-          ↑↓ Navigate  PgUp/PgDn Page  →/Enter Open  ← Back one level
-          Esc leaves search; otherwise goes to package home. q quits when not typing.
-          i toggles inherited methods.
-          C reads the class description from the member list.
+          Home starts with two-segment package groups such as java.awt.
+          Search begins active on launch; Esc clears the query and exits search.
+          Opening a package starts search there, even after Esc at its parent.
+          From java, type List to find classes in descendant packages. Esc
+          exits search in the current view; typing in a package restarts it.
+          Use / to search when the first letter is a command shortcut.
+          d/Enter/→ opens a group, class, description, or method.
+          c/← collapses one level; h Home; b Bookmarks; q Quit; p Hidden packages.
+          In members, Tab/1–5 changes kind; d/→ expands overloads, c/← collapses.
+          Filters combine: /:static #2, /:since 21, /:deprecated, /->String.
+          i toggles inherited methods on the Methods tab.
+          Class description is the first Methods row; d/Enter/→ reads it.
+          In detail: o opens source, y copies signature, m copies import,
+          s bookmarks the class. r opens recent classes.
 
         Colors are disabled by NO_COLOR or when output is redirected.
         A number after -p/--params is a parameter COUNT, not an overload number.

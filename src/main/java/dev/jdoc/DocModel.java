@@ -36,6 +36,7 @@ final class DocModel {
 
     String name;
     String signature;
+    String returnType;
     String description;
     String details;
     List<Block> body = new ArrayList<>();

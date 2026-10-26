@@ -5,31 +5,10 @@ import org.junit.jupiter.api.Test;
 import org.jline.utils.NonBlockingReader;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class MethodBrowserTest {
-    @Test
-    void filteringRetainsJavadocOrderAndClampsNavigation() {
-        DocModel.Method first = method("add(E e)");
-        DocModel.Method other = method("clear()");
-        DocModel.Method second = method("add(int index, E element)");
-        MethodBrowser.State state = new MethodBrowser.State(Arrays.asList(first, other, second));
-        state.filter("ADD");
-        assertEquals(Arrays.asList(first, second), state.matches);
-        state.move(100);
-        assertSame(second, state.selected());
-        state.keepVisible(1);
-        assertEquals(1, state.top);
-        state.move(-100);
-        state.keepVisible(1);
-        assertSame(first, state.selected());
-        assertEquals(0, state.top);
-        state.filter("missing");
-        assertNull(state.selected());
-    }
-
     @Test
     void outputCanBeClippedAndColoredWithoutChangingPlainContent() {
         assertEquals("met…", MethodBrowser.shorten("method", 4));
@@ -53,7 +32,7 @@ class MethodBrowserTest {
     }
 
     @Test
-    void leftMovesUpOneLevelAndEscapeGoesHome() {
+    void descriptionIsSelectableAndCollapseMovesUpTheTree() {
         DocModel doc = new DocModel();
         doc.name = "java.lang.String";
         doc.release = "17";
@@ -63,40 +42,88 @@ class MethodBrowserTest {
         assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1005, 24));
         assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1004, 24));
         assertEquals(MethodBrowser.Navigation.BACK, browser.handleKey(1004, 24));
-        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1005, 24));
-        assertEquals(MethodBrowser.Navigation.HOME, browser.handleKey(27, 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(27, 24));
+        assertEquals(MethodBrowser.Navigation.HOME, browser.handleKey('h', 24));
     }
 
     @Test
-    void uppercaseCOpensClassDocumentationWithoutStealingLowercaseSearch() {
+    void descriptionKeyOpensClassOrMethodAfterLeavingSearch() {
         DocModel doc = new DocModel();
         doc.name = "java.lang.String";
         doc.release = "17";
         doc.methods.add(method("clear()"));
         MethodBrowser browser = new MethodBrowser(doc);
+        browser.beginSearch();
+        for (char c : "clear".toCharArray()) browser.handleKey(c, 24);
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(27, 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey('d', 24));
         assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey('c', 24));
-        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey('q', 24));
-        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey('C', 24));
-        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1004, 24));
         assertEquals(MethodBrowser.Navigation.BACK, browser.handleKey(1004, 24));
-
-        MethodBrowser fresh = new MethodBrowser(doc);
-        fresh.handleKey('/', 24);
-        assertEquals(MethodBrowser.Navigation.STAY, fresh.handleKey('C', 24));
-        assertEquals(MethodBrowser.Navigation.STAY, fresh.handleKey(1004, 24));
-        assertEquals(MethodBrowser.Navigation.BACK, fresh.handleKey(1004, 24));
     }
 
     @Test
-    void firstEscapeLeavesSearchAndSecondEscapeGoesHome() {
+    void escapeClearsSearchAndOnlySlashCanReactivateIt() {
         DocModel doc = new DocModel();
         doc.name = "java.lang.String";
         doc.methods.add(method("repeat(int count)"));
         MethodBrowser browser = new MethodBrowser(doc);
-        browser.handleKey('/', 24);
+        browser.beginSearch();
         browser.handleKey('r', 24);
         assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(27, 24));
-        assertEquals(MethodBrowser.Navigation.HOME, browser.handleKey(27, 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(27, 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey('d', 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey('c', 24));
+        assertEquals(MethodBrowser.Navigation.BACK, browser.handleKey(1004, 24));
+        assertEquals(MethodBrowser.Navigation.QUIT, browser.handleKey('q', 24));
+        MethodBrowser fresh = new MethodBrowser(doc);
+        fresh.handleKey('r', 24);
+        assertEquals(MethodBrowser.Navigation.QUIT, fresh.handleKey('q', 24));
+        fresh.handleKey('/', 24);
+        fresh.handleKey('r', 24);
+        assertEquals(MethodBrowser.Navigation.STAY, fresh.handleKey(27, 24));
+        assertEquals(MethodBrowser.Navigation.BACK, fresh.handleKey(1004, 24));
+    }
+
+    @Test
+    void rightExpandsOverloadGroupAndLeftCollapsesBeforeLeavingClass() {
+        DocModel doc = new DocModel();
+        doc.name = "java.lang.String";
+        doc.methods.add(method("valueOf(boolean value)"));
+        doc.methods.add(method("valueOf(char[] value)"));
+        MethodBrowser browser = new MethodBrowser(doc);
+        browser.handleKey(1001, 24); // Select overload group after Class description.
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1005, 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1005, 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1004, 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1004, 24));
+        assertEquals(MethodBrowser.Navigation.BACK, browser.handleKey(1004, 24));
+    }
+
+    @Test
+    void leftFromActiveMemberSearchReturnsToSelectedClass() {
+        DocModel doc = new DocModel();
+        doc.name = "java.util.ArrayList";
+        doc.methods.add(method("equals(Object other)"));
+        MethodBrowser browser = new MethodBrowser(doc);
+        browser.beginSearch();
+        for (char c : "equals".toCharArray()) browser.handleKey(c, 24);
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1005, 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(1004, 24));
+        assertEquals(MethodBrowser.Navigation.BACK, browser.handleKey(1004, 24));
+    }
+
+    @Test
+    void lowercaseBookmarksAndHomeKeysAreCommandsOnlyOutsideSearch() {
+        DocModel doc = new DocModel();
+        doc.methods.add(method("repeat(int count)"));
+        MethodBrowser browser = new MethodBrowser(doc);
+        assertEquals(MethodBrowser.Navigation.BOOKMARKS, browser.handleKey('b', 24));
+        assertEquals(MethodBrowser.Navigation.HOME, browser.handleKey('h', 24));
+        browser.beginSearch();
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey('b', 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey('h', 24));
+        assertEquals(MethodBrowser.Navigation.STAY, browser.handleKey(27, 24));
+        assertEquals(MethodBrowser.Navigation.BOOKMARKS, browser.handleKey('b', 24));
     }
 
     private static NonBlockingReader reader(String keys) {

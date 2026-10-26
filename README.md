@@ -1,89 +1,37 @@
 # jDoc
 
-jDoc brings Java 17, 21, and 25 API docs to your terminal. Look up JDK classes and members by name, browse their documentation, and choose a documentation release independently of your installed Java version.
+Read Java 17, 21, and 25 API documentation in your macOS terminal. Search JDK classes, browse members, and choose a documentation release independently of the Java version running jDoc.
 
-## Requirements
+## Get started
 
-- Java 17 or newer (the documentation release can differ from your installed Java)
-- Maven to build from source
-- Network access for the first lookup of a release or class
-
-## Build and run
+You need Java 17 or newer and Maven to build from source. The first lookup of a release or an uncached class requires network access.
 
 From the repository directory:
 
 ```sh
 mvn package
-./jDoc
-./jDoc String
+./jDoc                    # Browse packages and classes interactively
+./jDoc String             # Open the String API
+./jDoc --docVersion 21    # Save Java 21 as the documentation release
 ```
 
-`./jDoc` opens a package browser in a terminal. Type a package name or a class
-name such as `String` at the home screen; a matching class opens directly when
-selected. The first launch
-downloads the class index; a class page is fetched only when you open that class.
-Subsequent lookups of cached classes work offline.
+Without a saved selection, jDoc detects a release from a local Maven or Gradle project, then `JAVA_HOME`, then the running Java. Run `./jDoc --versions` to see supported releases and cache status. To use a release for one lookup without saving it, run `./jDoc --docVersion 21 String`.
 
-**Supported documentation releases:** Java 17, 21, and 25. Without a saved
-selection, jDoc checks Maven `pom.xml` or Gradle `build.gradle[.kts]` in the
-current directory and its parents. `maven.compiler.release` and Gradle
-`options.release` take priority over toolchain settings. If no static project
-target is found, it uses `JAVA_HOME`, then the running Java. It selects the
-closest supported release no newer than the detected version (Java 22 selects
-Java 21 docs) and reports the source on stderr. `targetCompatibility` and
-`maven.compiler.target` are weaker bytecode settings; they do not restrict APIs.
-Build scripts are read, never executed. Use `./jDoc --docVersion 21` to save an
-explicit preference, or `./jDoc --docVersion 21 java.util.List -getFirst` for one lookup.
+## First steps in the browser
 
-## Examples
+Home starts with `java.*` package groups and search already active. Type a class name such as `ArrayList`, use Up/Down to select a result, and press Enter or Right Arrow to open it. Press Tab on home to include other package families for this session.
 
-| Command | Result |
+| Key | Action |
 | --- | --- |
-| `./jDoc --versions` | List supported documentation releases and cache status |
-| `./jDoc` | Search packages or classes, then browse members and documentation |
-| `./jDoc --docVersion 21` | Select Java 21 documentation for future lookups |
-| `./jDoc String` | Browse methods documented on `String` |
-| `./jDoc Exception` | Browse the class description and constructors |
-| `./jDoc String -repeat` | Show the `repeat` method |
-| `./jDoc String -valueOf` | Show the first `valueOf` overload |
-| `./jDoc String valueOf -p char-array,int,int` | Find a specific overload |
-| `./jDoc ArrayList -stream` | Show an inherited method and its declaring class |
-| `./jDoc ArrayList -p 1 -i` | Include inherited methods in a parameter-count listing |
-| `./jDoc Integer.MAX_VALUE` | Show a field |
-| `./jDoc TimeUnit.SECONDS` | Show an enum constant |
-| `./jDoc Map Entry` | Show a nested type |
-| `./jDoc -m computeIfAbsent` | List classes documenting that method |
-| `./jDoc --docVersion 21 java.util.List -getFirst` | Use Java 21 docs for one lookup |
-| `./jDoc --diff 17 21 StringBuilder` | Compare all changed member kinds; shows two new `repeat` methods |
-| `./jDoc --diff 21 25 StringTemplate` | See a Java 21 Preview type absent in Java 25 |
-| `./jDoc --new 21` | List APIs introduced in Java 21, grouped by package |
-| `./jDoc --removal 25` | List APIs flagged for removal as of Java 25 |
-| `./jDoc --help` | Show all options |
+| Enter / Right Arrow | Open the selected package, class, or member |
+| Left Arrow | Go back one level; from members to the class's package, then home |
+| Escape | Clear the current search and leave search mode |
+| `/` | Start a search when the first character conflicts with a shortcut |
+| `h` / `q` | Home / quit outside search mode |
 
-In the browser, type to search packages and classes from home, or to filter the
-current level. Right Arrow or Enter opens the selection; selecting a package
-shows its classes, while selecting a class opens its members. Left Arrow goes
-back one level. Escape first leaves an active search (keeping its results);
-otherwise it returns to home. `q` quits when you are not typing. Inherited
-methods are collapsed by default; press `i` to toggle them. Their full
-documentation is fetched only when opened.
-Press `C` from a member list to read the full class description. Paragraphs,
-code examples, lists, and link targets are preserved in documentation details;
-`Since`, `Deprecated`, and `Preview` are shown as text labels when available.
-With no terminal, provide a class name for plain-text output. Set `NO_COLOR=1`
-to disable color, or `JDOC_CACHE` to choose a different cache directory.
+Opening a package starts search within it. When you leave search mode with Escape, you can type another class name in that package. Use `./jDoc <Class>` for a direct lookup; with no interactive terminal, supply a class name for plain-text output.
 
-jDoc currently searches JDK documentation, not project dependencies. Methods inherited from `Object` are hidden in the class browser.
-If a lookup fails, jDoc checks **other cached releases** for that class or
-member and identifies a declaring type when a cached class page confirms it.
-An uncached release is reported as unknown rather than incorrectly called absent.
-Type and package search indexes are downloaded on first use of a release; the
-larger member index is fetched only for reverse member search.
-Version diffs fetch and cache both class pages on demand; a complete diff needs
-both releases available. New-API and removal reports cache their summary pages
-after first use. `--new` filters the cumulative New API page to the requested
-release; `--removal` shows the for-removal status in that release, not merely
-ordinary deprecation. Preview, deprecation, and removal are separate statuses.
+For all commands, member filters, navigation keys, bookmarks, package visibility, version comparisons, and caching behavior, read the **[user guide](docs/User_Guide.md)**. Run `./jDoc --help` for the command-line synopsis. For implementation requirements, see the [project specification](docs/specs.MD).
 
 ## Contributing
 
