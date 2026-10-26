@@ -43,7 +43,7 @@ final class MemberLookup {
       return name == null || candidates.isEmpty() ? candidates : candidates.subList(0, 1);
     }
     if (!tokens.remove(0).matches("-p|--params")) {
-      throw new IllegalArgumentException("Expected -p/--params after the method name. See jDoc --help.");
+      throw new IllegalArgumentException("Expected -p/--params after the method name. See jdoc --help.");
     }
     if (tokens.isEmpty()) {
       throw new IllegalArgumentException("-p requires a parameter count or parameter types.");
@@ -56,7 +56,7 @@ final class MemberLookup {
     }
     if (name == null) {
       throw new IllegalArgumentException(
-          "Parameter types require a method name; use e.g. jDoc String valueOf -p char-array,int,int.");
+          "Parameter types require a method name; use e.g. jdoc String valueOf -p char-array,int,int.");
     }
     List<String> types = Arrays.stream(value.split(",", -1)).map(JavadocParser::erase).toList();
     return candidates.stream().filter(m -> parameterized(m, doc)

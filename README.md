@@ -10,12 +10,12 @@ From the repository directory:
 
 ```sh
 mvn package
-./jDoc                    # Browse packages and classes interactively
-./jDoc String             # Open the String API
-./jDoc --docVersion 21    # Save Java 21 as the documentation release
+./jdoc                    # Browse packages and classes interactively
+./jdoc String             # Open the String API
+./jdoc --docVersion 21    # Save Java 21 as the documentation release
 ```
 
-Without a saved selection, jDoc detects a release from a local Maven or Gradle project, then `JAVA_HOME`, then the running Java. Run `./jDoc --versions` to see supported releases and cache status. To use a release for one lookup without saving it, run `./jDoc --docVersion 21 String`.
+Without a saved selection, jDoc detects a release from a local Maven or Gradle project, then `JAVA_HOME`, then the running Java. Run `./jdoc --versions` to see supported releases and cache status. To use a release for one lookup without saving it, run `./jdoc --docVersion 21 String`.
 
 ## First steps in the browser
 
@@ -29,9 +29,9 @@ Home starts with `java.*` package groups and search already active. Type a class
 | `/` | Start a search when the first character conflicts with a shortcut |
 | `h` / `q` | Home / quit outside search mode |
 
-Opening a package starts search within it. When you leave search mode with Escape, you can type another class name in that package. Use `./jDoc <Class>` for a direct lookup; with no interactive terminal, supply a class name for plain-text output.
+Opening a package starts search within it. When you leave search mode with Escape, you can type another class name in that package. Use `./jdoc <Class>` for a direct lookup; with no interactive terminal, supply a class name for plain-text output.
 
-For all commands, member filters, navigation keys, bookmarks, package visibility, version comparisons, and caching behavior, read the **[user guide](docs/User_Guide.md)**. Run `./jDoc --help` for the command-line synopsis. For implementation requirements, see the [project specification](docs/specs.MD).
+For all commands, member filters, navigation keys, bookmarks, package visibility, version comparisons, and caching behavior, read the **[user guide](docs/User_Guide.md)**. Run `./jdoc --help` for the command-line synopsis. For implementation requirements, see the [project specification](docs/specs.MD).
 
 ## Contributing
 
