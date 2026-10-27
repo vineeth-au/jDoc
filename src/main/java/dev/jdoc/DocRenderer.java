@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-/** Shared plain-text layout for terminal details and redirected output. */
 final class DocRenderer {
   private DocRenderer() {}
 

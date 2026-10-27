@@ -18,6 +18,10 @@ import java.util.regex.Pattern;
 
 final class JavadocParser {
 
+  private JavadocParser() {
+    throw new AssertionError();
+  }
+
   static DocModel parse(Document page, String name, String url, String release) {
     DocModel doc = new DocModel();
     doc.schemaVersion = 5;
@@ -306,8 +310,5 @@ final class JavadocParser {
     return type.trim().replaceAll("\\s+", "")
         .replace("-array", "[]").replace("...", "[]")
         .replaceAll("(?:[\\w$]+\\.)+([\\w$]+)", "$1");
-  }
-
-  private JavadocParser() {
   }
 }

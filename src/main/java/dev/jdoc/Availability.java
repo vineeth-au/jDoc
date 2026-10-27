@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-/** Explains failed lookups using only indexes/pages already cached for other releases. */
 final class Availability {
   private final Documentation docs;
 

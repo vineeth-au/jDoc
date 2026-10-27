@@ -407,7 +407,6 @@ public final class Main {
 
   private static void help() {
     System.out.println("""
-        jDoc — terminal Java API documentation
         Usage:
           jdoc --docVersion <release>     Select the default documentation release.
                                           Supported versions: 17, 21, 25
@@ -426,35 +425,19 @@ public final class Main {
           jdoc --removal <release>        APIs flagged for removal as of a release
 
         Browser: Packages → Classes → Members → Documentation.
-          Home starts with two-segment package groups such as java.awt.
-          Tab at home toggles java.* only / all packages for this session.
-          Search begins active on launch; Esc clears the query and exits search.
-          Opening a package starts search there, even after Esc at its parent.
-          From java, type List to find classes in descendant packages. Esc
-          exits search in the current view; typing in a package restarts it.
-          Use / to search when the first letter is a command shortcut.
-          d/Enter/→ opens a group, class, description, or method.
-          c/← collapses one level; h Home; b Bookmarks; q Quit; p Hidden packages.
-          In members, Tab/1–5 changes kind outside search; d/→ expands overloads, c/← collapses.
-          Filters combine: /:static #2, /:since 21, /:deprecated, /->String.
-          i toggles inherited methods on the Methods tab.
-          Class description is the first unfiltered Methods row; d/Enter/→ reads it.
-          In detail: o opens source, y copies signature, m copies import,
-          s bookmarks the class. In package command mode, r opens recent classes.
-
-        Colors are disabled by NO_COLOR or when output is redirected.
-        A number after -p/--params is a parameter COUNT, not an overload number.
-
-        Types require a method name. Use char-array for char[]. Put -p last.
-        Examples: jdoc String -repeat
-                  jdoc String -p 1
-                  jdoc String valueOf -p 3
-                  jdoc String valueOf -p char-array, int, int
-
-        Release precedence: explicit --docVersion, project build release, JAVA_HOME,
-        running Java. Literal Maven and Gradle settings are detected without
-        executing the build. Target/source compatibility alone does not restrict APIs.
-        Type/member indexes and class pages are fetched on demand and cached.
-        A missing API checks other cached releases; an uncached release is unknown.""");
+          /               : Search
+          Esc             : Clears the query and exits search
+          d (Enter and →) : Describe  opens a group, class, description, or method
+          c (←)           : Collapse  collapses one level
+          h               : Home
+          b               : View Saved Bookmarks
+          s               : Bookmarks the class
+          q               : Quit
+          p               : Hidden packages
+          o               : Opens Documentation Source
+          y               : Copy Signature
+          m               : Copy Import
+          r               : View Recent Search
+        """);
   }
 }
