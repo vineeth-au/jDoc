@@ -30,8 +30,7 @@ Home starts with `java.*` package groups and search already active. Type a class
 | `h` / `q` | Home / quit outside search mode |
 
 Opening a package starts search within it. When you leave search mode with Escape, you can type another class name in that package. Use `./jdoc <Class>` for a direct lookup; with no interactive terminal, supply a class name for plain-text output.
-
-For all commands, member filters, navigation keys, bookmarks, package visibility, version comparisons, and caching behavior, read the **[user guide](docs/User_Guide.md)**. Run `./jdoc --help` for the command-line synopsis. For implementation requirements, see the [project specification](docs/specs.MD).
+Run `./jdoc --help` for the command-line synopsis.
 
 ## Contributing
 
