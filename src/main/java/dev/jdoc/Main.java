@@ -407,7 +407,6 @@ public final class Main {
 
   private static void help() {
     System.out.println("""
-        jDoc — terminal Java API documentation
         Usage:
           jdoc --docVersion <release>     Select the default documentation release.
                                           Supported versions: 17, 21, 25
@@ -439,11 +438,6 @@ public final class Main {
           y               : Copy Signature
           m               : Copy Import
           r               : View Recent Search
-
-        Types require a method name. Use char-array for char[]. Put -p last.
-        Examples: jdoc String -repeat
-                  jdoc String -p 1
-                  jdoc String valueOf -p 3
-                  jdoc String valueOf -p char-array, int, int""");
+        """);
   }
 }
