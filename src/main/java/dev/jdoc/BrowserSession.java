@@ -7,7 +7,6 @@ import org.jline.terminal.Attributes;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 
-/** Owns the terminal for the entire package → class → member → detail journey. */
 final class BrowserSession {
   private final Documentation docs;
   private final Map<String, String> index;

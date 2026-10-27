@@ -156,7 +156,6 @@ final class PackageBrowser {
     };
   }
 
-  /** Returns a class name when a class result is opened; otherwise null. */
   String handleKey(int key, int height) {
     if (key == 27) {
       if (selection().searching) {
@@ -350,7 +349,6 @@ final class PackageBrowser {
     return visibleHomePackage(pkg) && name.substring(pkg.length() + 1).indexOf('.') < 0;
   }
 
-  /** Exact names, then prefixes, then camel-case components; qualified queries use full names. */
   private int searchRank(String name, String query) {
     boolean isClass = index.containsKey(name);
     String candidate = isClass && !query.contains(".")

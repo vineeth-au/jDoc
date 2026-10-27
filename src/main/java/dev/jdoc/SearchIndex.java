@@ -11,7 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Parses Javadoc's JSON-in-JavaScript indexes without executing their JavaScript. */
 final class SearchIndex {
   private SearchIndex() {}
 

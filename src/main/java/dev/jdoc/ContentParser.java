@@ -11,7 +11,6 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 
-/** Turns Javadoc prose into paragraphs, code blocks, lists, and typed links. */
 final class ContentParser {
   private ContentParser() {}
 

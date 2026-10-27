@@ -5,7 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/** Selects documented members without fetching inherited detail pages. */
+
 final class MemberLookup {
   private MemberLookup() {}
 

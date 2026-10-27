@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
-/** macOS quick actions; process launches are replaceable in tests. */
 final class BrowserActions {
   interface Runner {
     void open(String url) throws IOException;

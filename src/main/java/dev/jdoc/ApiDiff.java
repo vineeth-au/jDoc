@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** Compares the effective documented API of a type across two releases. */
 final class ApiDiff {
   private static final List<String> KINDS = List.of("method", "constructor", "field",
       "enum constant", "nested type");

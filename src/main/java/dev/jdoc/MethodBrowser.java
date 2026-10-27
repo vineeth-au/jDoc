@@ -1,16 +1,14 @@
 package dev.jdoc;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.List;
+import java.util.Locale;
 import org.jline.terminal.Terminal;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
 import org.jline.utils.NonBlockingReader;
-
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 
 // TODO: This entire class is shit and needs to be re-written
 final class MethodBrowser {
@@ -357,7 +355,7 @@ final class MethodBrowser {
       case "6~" -> 1003;
       case "D" -> 1004;
       case "C" -> 1005;
-      default -> -2; // An arrow/unknown sequence is not a standalone Escape.
+      default -> -2;
     };
   }
 

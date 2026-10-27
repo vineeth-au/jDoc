@@ -53,7 +53,7 @@ final class DocModel {
   }
 
   static final class Block {
-    String kind; // paragraph, code, list, or label
+    String kind;
     List<Inline> inlines = new ArrayList<>();
     String code;
     List<Inline> codeLinks = new ArrayList<>();
