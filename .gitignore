@@ -26,3 +26,5 @@ replay_pid*
 target/
 .idea/
 *.DS_Store
+
+/temp_folder
