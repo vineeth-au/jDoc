@@ -1,40 +1,73 @@
 # jDoc
 
-Read Java 17, 21, and 25 API documentation in your macOS terminal. Search JDK classes, browse members, and choose a documentation release independently of the Java version running jDoc.
+Read Java 17, 21, and 25 API documentation in your macOS terminal. Search JDK classes, browse methods, compare APIs across releases, and choose a documentation release independently of the Java version.
 
 ## Get started
 
-You need Java 17 or newer and Maven to build from source. The first lookup of a release or an uncached class requires network access.
-
-From the repository directory:
+jDoc is avaliable on Homebrew. To install jDoc
 
 ```sh
-mvn package
-./jdoc                    # Browse packages and classes interactively
-./jdoc String             # Open the String API
-./jdoc --docVersion 21    # Save Java 21 as the documentation release
+brew install toolfoundrylabs/tap/jdoc
+jdoc String                        # open the String API
 ```
+The first lookup of a release needs network access to download its class index and the requested page. Cached pages work offline after that.
 
-Without a saved selection, jDoc detects a release from a local Maven or Gradle project, then `JAVA_HOME`, then the running Java. Run `./jdoc --versions` to see supported releases and cache status. To use a release for one lookup without saving it, run `./jdoc --docVersion 21 String`.
+To update, run `brew upgrade jdoc`. To uninstall, run `brew uninstall jdoc`.
 
-## First steps in the browser
+## Examples
 
-Home starts with `java.*` package groups and search already active. Type a class name such as `ArrayList`, use Up/Down to select a result, and press Enter or Right Arrow to open it. Press Tab on home to include other package families for this session.
+| Command | Result |
+| --- | --- |
+| `jdoc` | Browse packages and classes interactively |
+| `jdoc String -repeat` | Read a specific method |
+| `jdoc String valueOf -p 3` | Filter overloads by parameter count |
+| `jdoc Integer.MAX_VALUE` | Read a field |
+| `jdoc -m computeIfAbsent` | Find types that declare a method |
+| `jdoc --diff 17 21 StringBuilder` | Compare an API across releases |
+| `jdoc --new 21` | List APIs introduced in Java 21 |
+
+
+## Interactive browser
+
+Run `jdoc` with no arguments. Home starts with `java.*` package groups and search already active. Type a class name such as `ArrayList`, use Up/Down to select a result, and press Enter or Right Arrow to open it. Press Tab on home to include other package families for this session.
 
 | Key | Action |
 | --- | --- |
 | Enter / Right Arrow | Open the selected package, class, or member |
-| Left Arrow | Go back one level; from members to the class's package, then home |
+| Left Arrow | Go back one level |
 | Escape | Clear the current search and leave search mode |
 | `/` | Start a search when the first character conflicts with a shortcut |
 | `h` / `q` | Home / quit outside search mode |
 
-Opening a package starts search within it. When you leave search mode with Escape, you can type another class name in that package. Use `./jdoc <Class>` for a direct lookup; with no interactive terminal, supply a class name for plain-text output.
-Run `./jdoc --help` for the command-line synopsis.
+Press Escape to leave search mode and use shortcuts. See the [user guide](https://github.com/vineeth-au/jDoc/wiki/jDoc-user-guide) for all keys and member filters. Run `jdoc --help` for the command-line synopsis.
+
+## Choosing a release
+
+jDoc picks a documentation release from your Maven or Gradle project, then `JAVA_HOME`, then its own runtime, and prints which source it used.
+
+```sh
+jdoc --versions                # supported and cached releases
+jdoc --docVersion 21           # save Java 21 as the default
+jdoc --docVersion 21 String    # use Java 21 for one lookup
+```
+
+## Documentation
+
+- [User guide](https://github.com/vineeth-au/jDoc/wiki/jDoc-user-guide) covers browser keys, member filters, lookups, and the cache.
+- [Troubleshooting](https://github.com/vineeth-au/jDoc/wiki/jDoc-user-guide#troubleshooting)
+
+Found a bug? [Open an issue](https://github.com/vineeth-au/jDoc/issues) with the command you ran, its output, and `jdoc --version`.
 
 ## Contributing
 
-Bug reports and pull requests are welcome. Run `mvn test` before submitting a change.
+Bug reports and pull requests are welcome. To build from source, you need Java 17+ and Maven:
+
+```sh
+mvn package && ./jdoc
+mvn test        # run before submitting a change
+```
+
+See [Contributing](https://github.com/vineeth-au/jDoc/wiki/Contributing) for guidelines.
 
 ## License
 
