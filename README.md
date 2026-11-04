@@ -4,15 +4,12 @@ Read Java 17, 21, and 25 API documentation in your macOS terminal. Search JDK cl
 
 ## Get started
 
-jDoc is avaliable on Homebrew. To install jDoc
-
+To install jDoc
 ```sh
 brew install toolfoundrylabs/tap/jdoc
-jdoc String                        # open the String API
 ```
-The first lookup of a release needs network access to download its class index and the requested page. Cached pages work offline after that.
-
-To update, run `brew upgrade jdoc`. To uninstall, run `brew uninstall jdoc`.
+> [!IMPORTANT]
+> The first lookup of a release needs network access to download its class index and the requested page. Cached pages work offline after that.
 
 ## Examples
 
@@ -39,7 +36,7 @@ Run `jdoc` with no arguments. Home starts with `java.*` package groups and searc
 | `/` | Start a search when the first character conflicts with a shortcut |
 | `h` / `q` | Home / quit outside search mode |
 
-Press Escape to leave search mode and use shortcuts. See the [user guide](https://github.com/vineeth-au/jDoc/wiki/jDoc-user-guide) for all keys and member filters. Run `jdoc --help` for the command-line synopsis.
+Press Escape to leave search mode and use shortcuts. See the [user guide](https://github.com/vineeth-au/jDoc/wiki/Command-Line-Reference) for all keys and member filters. Alternatively, run `jdoc --help` for command-line synopsis.
 
 ## Choosing a release
 
@@ -53,21 +50,14 @@ jdoc --docVersion 21 String    # use Java 21 for one lookup
 
 ## Documentation
 
-- [User guide](https://github.com/vineeth-au/jDoc/wiki/jDoc-user-guide) covers browser keys, member filters, lookups, and the cache.
-- [Troubleshooting](https://github.com/vineeth-au/jDoc/wiki/jDoc-user-guide#troubleshooting)
+- [User guide](https://github.com/vineeth-au/jDoc/wiki) covers how to use jDoc effectively.
+- [Troubleshooting](https://github.com/vineeth-au/jDoc/wiki/Troubleshooting) Incase you run into issues.
 
 Found a bug? [Open an issue](https://github.com/vineeth-au/jDoc/issues) with the command you ran, its output, and `jdoc --version`.
 
 ## Contributing
 
-Bug reports and pull requests are welcome. To build from source, you need Java 17+ and Maven:
-
-```sh
-mvn package && ./jdoc
-mvn test        # run before submitting a change
-```
-
-See [Contributing](https://github.com/vineeth-au/jDoc/wiki/Contributing) for guidelines.
+Bug reports and pull requests are welcome. To build from source, you need Java 17+ and Maven. Refer [Contributing](https://github.com/vineeth-au/jDoc/wiki/Contributing) for more details.
 
 ## License
 
