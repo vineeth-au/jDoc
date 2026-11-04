@@ -4,15 +4,15 @@ Read Java 17, 21, and 25 API documentation in your macOS terminal. Search JDK cl
 
 ## Get started
 
-jDoc is avaliable on Homebrew. To install jDoc
-
+To install jDoc
 ```sh
 brew install toolfoundrylabs/tap/jdoc
-jdoc String                        # open the String API
 ```
-The first lookup of a release needs network access to download its class index and the requested page. Cached pages work offline after that.
+> [!IMPORTANT]
+> The first lookup of a release needs network access to download its class index and the requested page. Cached pages work offline after that.
 
-To update, run `brew upgrade jdoc`. To uninstall, run `brew uninstall jdoc`.
+To update, run `brew upgrade jdoc`. 
+To uninstall, run `brew uninstall jdoc`.
 
 ## Examples
 
