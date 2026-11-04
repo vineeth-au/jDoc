@@ -11,9 +11,6 @@ brew install toolfoundrylabs/tap/jdoc
 > [!IMPORTANT]
 > The first lookup of a release needs network access to download its class index and the requested page. Cached pages work offline after that.
 
-To update, run `brew upgrade jdoc`. 
-To uninstall, run `brew uninstall jdoc`.
-
 ## Examples
 
 | Command | Result |
@@ -53,8 +50,8 @@ jdoc --docVersion 21 String    # use Java 21 for one lookup
 
 ## Documentation
 
-- [User guide](https://github.com/vineeth-au/jDoc/wiki/jDoc-user-guide) covers browser keys, member filters, lookups, and the cache.
-- [Troubleshooting](https://github.com/vineeth-au/jDoc/wiki/jDoc-user-guide#troubleshooting)
+- [User guide](https://github.com/vineeth-au/jDoc/wiki/jDoc-user-guide) covers how to use jDoc effectively.
+- [Troubleshooting](https://github.com/vineeth-au/jDoc/wiki/jDoc-user-guide#troubleshooting) Incase you run into issues.
 
 Found a bug? [Open an issue](https://github.com/vineeth-au/jDoc/issues) with the command you ran, its output, and `jdoc --version`.
 
